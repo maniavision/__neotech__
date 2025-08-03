@@ -20,6 +20,8 @@ public abstract class AbstractToken {
     @JoinColumn(name = "user_id")
     private User user;
 
+    private String tempPassword;
+
     public Long getId() {
         return id;
     }
@@ -50,6 +52,14 @@ public abstract class AbstractToken {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getTempPassword() {
+        return tempPassword;
+    }
+
+    public void setTempPassword(String tempPassword) {
+        this.tempPassword = tempPassword;
     }
 }
 

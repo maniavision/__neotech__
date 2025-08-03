@@ -39,17 +39,25 @@ public class RequestService {
         User user = getCurrentUser(requestData.getEmail());
 
         if (user == null && requestData.getEmail() != null) {
-
+            NewUserDto newUserDto = new NewUserDto(
+                    requestData.getFirstName(),
+                    requestData.getLastName(),
+                    requestData.getCompanyName(),
+                    requestData.getEmail(),
+                    requestData.getPhone(),
+                    UUID.randomUUID().toString()
+            );
+            user = userService.register(newUserDto);
         }
 
         ServiceRequest serviceRequest = new ServiceRequest();
         serviceRequest.setId(UUID.randomUUID().toString());
         if (user != null) {
             serviceRequest.setUserId(user.getId());
-//            serviceRequest.setUserName(user.getName());
+            serviceRequest.setUserName(user.getFirstName() + " " + user.getLastName());
             serviceRequest.setUserEmail(user.getEmail());
         } else {
-//            serviceRequest.setUserName(requestData.getName());
+            serviceRequest.setUserName(requestData.getFirstName() + " " + requestData.getLastName());
             serviceRequest.setUserEmail(requestData.getEmail());
         }
         serviceRequest.setTitle(requestData.getTitle());
@@ -64,7 +72,6 @@ public class RequestService {
             for (MultipartFile file : requestData.getAttachments()) {
                 String fileName = fileStorageService.storeFile(file);
                 FileAttachment attachment = new FileAttachment();
-//                attachment.setId(UUID.randomUUID().toString());
                 attachment.setFileName(fileName);
                 attachment.setFileSize(file.getSize());
                 attachment.setFileType(file.getContentType());

@@ -69,6 +69,8 @@ public class UserService {
         User user = evt.getUser();
         user.setEnabled(true);
         userRepo.save(user);
+
+        sendEmail(user.getEmail(), "Registration Confirmed", "Your temporary password is: " + evt.getTempPassword());
         evtRepo.delete(evt);
     }
 
