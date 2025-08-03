@@ -12,6 +12,15 @@ public class NewUserDto {
     String phone;
     @NotBlank @Size(min = 8) String password;
 
+    public NewUserDto(String firstName, String lastName, String companyName, String email, String phone, String password) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.companyName = companyName;
+        this.email = email;
+        this.phone = phone;
+        this.password = password;
+    }
+
     public String getFirstName() {
         return firstName;
     }

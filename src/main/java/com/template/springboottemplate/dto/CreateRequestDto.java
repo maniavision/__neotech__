@@ -6,7 +6,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public class CreateRequestDto {
-    private String name;
+    private String firstName;
+    private String lastName;
+
+    private String companyName;
+
     private String email;
     private String phone;
     private String title;
@@ -14,12 +18,28 @@ public class CreateRequestDto {
     private String description;
     private List<MultipartFile> attachments;
 
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
     }
 
     public String getEmail() {

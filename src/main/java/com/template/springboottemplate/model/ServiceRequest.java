@@ -10,7 +10,7 @@ import java.util.List;
 public class ServiceRequest {
     @Id
     private String id;
-    private String userId;
+    private Long userId;
     private String userName;
     private String userEmail;
     private String title;
@@ -34,11 +34,11 @@ public class ServiceRequest {
         this.id = id;
     }
 
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
