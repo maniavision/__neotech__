@@ -106,6 +106,10 @@ public class UserService {
         prtRepo.delete(prt);
     }
 
+    public User getUserByEmail(String email) {
+        return this.userRepo.findByEmail(email).orElseThrow();
+    }
+
     private void sendEmail(String to, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
