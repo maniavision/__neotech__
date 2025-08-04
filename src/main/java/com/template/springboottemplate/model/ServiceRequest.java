@@ -9,6 +9,7 @@ import java.util.List;
 @Table(name = "service_requests")
 public class ServiceRequest {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
     private Long userId;
     private String userName;
