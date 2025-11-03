@@ -3,6 +3,7 @@ package com.template.springboottemplate.dto;
 import com.template.springboottemplate.model.ServiceType;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public class CreateRequestDto {
@@ -16,6 +17,8 @@ public class CreateRequestDto {
     private String title;
     private ServiceType service;
     private String description;
+    private String budgetRange;
+    private LocalDate expectedDueDate;
     private List<MultipartFile> attachments;
 
     public String getFirstName() {
@@ -88,5 +91,21 @@ public class CreateRequestDto {
 
     public void setAttachments(List<MultipartFile> attachments) {
         this.attachments = attachments;
+    }
+
+    public String getBudgetRange() {
+        return budgetRange;
+    }
+
+    public void setBudgetRange(String budgetRange) {
+        this.budgetRange = budgetRange;
+    }
+
+    public LocalDate getExpectedDueDate() {
+        return expectedDueDate;
+    }
+
+    public void setExpectedDueDate(LocalDate expectedDueDate) {
+        this.expectedDueDate = expectedDueDate;
     }
 }

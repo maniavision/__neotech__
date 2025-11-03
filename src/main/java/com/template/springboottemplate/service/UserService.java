@@ -19,8 +19,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -29,6 +31,11 @@ public class UserService {
     final private PasswordResetTokenRepository prtRepo;
     final private PasswordEncoder encoder;
     final private JavaMailSender mailSender;
+
+    // Character set for password generation
+    private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
+    private static final int PASSWORD_LENGTH = 12;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender) {
         this.userRepo = userRepo;
@@ -60,6 +67,16 @@ public class UserService {
         return user;
     }
 
+    /**
+     * Generates a random 12-character password using alphanumeric chars and symbols.
+     */
+    private String generateRandomPassword() {
+        return RANDOM.ints(PASSWORD_LENGTH, 0, PASSWORD_CHARS.length())
+                .mapToObj(PASSWORD_CHARS::charAt)
+                .map(Object::toString)
+                .collect(Collectors.joining());
+    }
+
     public void confirmEmail(String token) {
         EmailVerificationToken evt = evtRepo.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
@@ -67,10 +84,22 @@ public class UserService {
             throw new RuntimeException("Token expired");
         }
         User user = evt.getUser();
+
+        // Generate a new password
+        String newPassword = generateRandomPassword();
+
+        // Update user with new password and enable them
+        user.setPassword(encoder.encode(newPassword));
         user.setEnabled(true);
         userRepo.save(user);
 
-        sendEmail(user.getEmail(), "Registration Confirmed", "Your temporary password is: " + evt.getTempPassword());
+        // Send email with the new password
+        sendEmail(user.getEmail(),
+                "Registration Confirmed",
+                "Your account has been activated. Your new password is: " + newPassword +
+                        "\n\nPlease use this password to log in and change it if you wish.");
+
+        // Delete the token
         evtRepo.delete(evt);
     }
 
@@ -118,4 +147,3 @@ public class UserService {
         mailSender.send(message);
     }
 }
-

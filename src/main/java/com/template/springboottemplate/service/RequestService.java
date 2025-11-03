@@ -63,6 +63,8 @@ public class RequestService {
         serviceRequest.setTitle(requestData.getTitle());
         serviceRequest.setService(requestData.getService());
         serviceRequest.setDescription(requestData.getDescription());
+        serviceRequest.setBudgetRange(requestData.getBudgetRange());
+        serviceRequest.setExpectedDueDate(requestData.getExpectedDueDate());
         serviceRequest.setStatus(RequestStatus.SUBMITTED);
         serviceRequest.setCreatedAt(LocalDateTime.now());
         serviceRequest.setUpdatedAt(LocalDateTime.now());

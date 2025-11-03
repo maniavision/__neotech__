@@ -2,6 +2,7 @@ package com.template.springboottemplate.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,6 +19,12 @@ public class ServiceRequest {
     @Enumerated(EnumType.STRING)
     private ServiceType service;
     private String description;
+
+    @Column(name = "budget_range")
+    private String budgetRange;
+
+    @Column(name = "expected_due_date")
+    private LocalDate expectedDueDate;
     @Enumerated(EnumType.STRING)
     private RequestStatus status;
     @OneToMany(cascade = CascadeType.ALL)
@@ -121,5 +128,21 @@ public class ServiceRequest {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getBudgetRange() {
+        return budgetRange;
+    }
+
+    public void setBudgetRange(String budgetRange) {
+        this.budgetRange = budgetRange;
+    }
+
+    public LocalDate getExpectedDueDate() {
+        return expectedDueDate;
+    }
+
+    public void setExpectedDueDate(LocalDate expectedDueDate) {
+        this.expectedDueDate = expectedDueDate;
     }
 }
