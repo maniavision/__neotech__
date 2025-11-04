@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${title}">Email from Neotech</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f4f7;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f7;
+            padding: 40px 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+            background-color: #ffffff;
+            padding: 32px 40px;
+            text-align: center;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .header img {
+            max-width: 160px;
+            height: auto;
+            display: inline-block;
+        }
+        .content {
+            padding: 40px;
+        }
+        .content h3 {
+            color: #1a1a1a;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            line-height: 1.3;
+        }
+        .content p {
+            margin-bottom: 16px;
+            font-size: 15px;
+            color: #4a4a4a;
+        }
+        .content p:last-of-type {
+            margin-bottom: 0;
+        }
+        .info-box {
+            background-color: #f9f7ff;
+            border-left: 4px solid #8A3FFC;
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+        .info-box p {
+            margin: 0;
+            color: #333333;
+        }
+        .button-container {
+            text-align: center;
+            margin: 32px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #8A3FFC;
+            color: #ffffff !important;
+            padding: 14px 32px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: background-color 0.2s ease;
+        }
+        .button:hover {
+            background-color: #7329e6;
+        }
+        .disclaimer {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e8e8e8;
+            font-size: 13px;
+            color: #777777;
+        }
+        .footer {
+            background-color: #fafafa;
+            padding: 24px 40px;
+            text-align: center;
+            border-top: 1px solid #e8e8e8;
+        }
+        .footer p {
+            font-size: 13px;
+            color: #888888;
+            margin: 0;
+        }
+        .footer a {
+            color: #8A3FFC;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Mobile responsiveness */
+        @media only screen and (max-width: 600px) {
+            .email-wrapper {
+                padding: 20px 0;
+            }
+            .container {
+                border-radius: 0;
+            }
+            .header,
+            .content,
+            .footer {
+                padding: 24px 20px;
+            }
+            .content h3 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-wrapper">
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <img src="cid:logo" alt="Neotech" />
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <h3 th:text="${title}">Email Title</h3>
+
+            <p th:text="${bodyText}">Hello,</p>
+
+            <!-- Optional Info Box -->
+            <div class="info-box" th:if="${infoText != null}">
+                <p th:text="${infoText}">Additional information will appear here.</p>
+            </div>
+
+            <!-- Call-to-Action Button -->
+            <div class="button-container" th:if="${linkUrl != null}">
+                <a th:href="${linkUrl}" class="button" th:text="${buttonText}">Take Action</a>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="disclaimer">
+                <p>If you did not request this communication or believe you received this email in error, please disregard this message.</p>
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="footer">
+            <p>&copy; <span th:text="${#dates.year(#dates.createNow())}">2025</span> Neotech. All rights reserved.</p>
+            <p style="margin-top: 8px;" th:if="${baseUrl != null}">
+<!--                <a th:href="${baseUrl} + '/privacy'">Privacy Policy</a> |-->
+<!--                <a th:href="${baseUrl} + '/terms'">Terms of Service</a> |-->
+<!--                <a th:href="${baseUrl} + '/contact'">Contact Us</a>-->
+
+                <a>Privacy Policy</a> |
+                <a>Terms of Service</a> |
+                <a>Contact Us</a>
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+
+

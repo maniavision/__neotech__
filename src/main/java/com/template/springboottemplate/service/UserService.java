@@ -10,14 +10,20 @@ import com.template.springboottemplate.model.User;
 import com.template.springboottemplate.repository.EmailVerificationTokenRepository;
 import com.template.springboottemplate.repository.PasswordResetTokenRepository;
 import com.template.springboottemplate.repository.UserRepository;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.BeanUtils;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -31,18 +37,20 @@ public class UserService {
     final private PasswordResetTokenRepository prtRepo;
     final private PasswordEncoder encoder;
     final private JavaMailSender mailSender;
+    final private TemplateEngine templateEngine;
 
     // Character set for password generation
     private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
     private static final int PASSWORD_LENGTH = 12;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender) {
+    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine) {
         this.userRepo = userRepo;
         this.evtRepo = evtRepo;
         this.prtRepo = prtRepo;
         this.encoder = encoder;
         this.mailSender = mailSender;
+        this.templateEngine = templateEngine;
     }
 
     public User register(NewUserDto dto) {
@@ -62,7 +70,16 @@ public class UserService {
         evtRepo.save(evt);
 
         String link = "http://localhost:8080/api/auth/confirm?token=" + token;
-        sendEmail(user.getEmail(), "Confirm your email", "Click to confirm: " + link);
+        // --- 3. Use the template ---
+        Context context = new Context();
+        context.setVariable("title", "Confirm Your Email");
+        context.setVariable("bodyText", "Welcome! Please click the button below to verify your email address and activate your account.");
+        context.setVariable("buttonText", "Verify Email");
+        context.setVariable("linkUrl", link);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+
+        sendEmail(user.getEmail(), "Confirm your email", htmlBody);
 
         return user;
     }
@@ -94,10 +111,17 @@ public class UserService {
         userRepo.save(user);
 
         // Send email with the new password
+        Context context = new Context();
+        context.setVariable("title", "Registration Confirmed");
+        context.setVariable("bodyText", "Your account has been successfully activated. Your temporary password is provided below. Please log in and change it.");
+        context.setVariable("infoText", "Your temporary password is: " + newPassword );
+        // We set linkUrl to null so the button doesn't appear
+        context.setVariable("linkUrl", null);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
         sendEmail(user.getEmail(),
                 "Registration Confirmed",
-                "Your account has been activated. Your new password is: " + newPassword +
-                        "\n\nPlease use this password to log in and change it if you wish.");
+                htmlBody);
 
         // Delete the token
         evtRepo.delete(evt);
@@ -120,7 +144,14 @@ public class UserService {
         prtRepo.save(prt);
 
         String link = "http://localhost:8080/api/auth/reset-password?token=" + token;
-        sendEmail(email, "Reset Your Password", "Click to reset: " + link);
+        Context context = new Context();
+        context.setVariable("title", "Password Reset Request");
+        context.setVariable("bodyText", "You requested to reset your password. Click the button below to proceed.");
+        context.setVariable("buttonText", "Reset Password");
+        context.setVariable("linkUrl", link);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(email, "Reset Your Password", htmlBody);
     }
 
     public void resetPassword(ResetPasswordDto dto) {
@@ -139,11 +170,24 @@ public class UserService {
         return this.userRepo.findByEmail(email).orElseThrow();
     }
 
-    private void sendEmail(String to, String subject, String text) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(text);
-        mailSender.send(message);
+    private void sendEmail(String to, String subject, String htmlBody) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8"); // true = multipart
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true); // true = HTML
+
+            // Add the logo as an inline resource
+            // "logo" is the Content-ID (CID) used in the <img> tag (src="cid:logo")
+            ClassPathResource logo = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logo);
+
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            // Handle exception (e.g., log it)
+            throw new RuntimeException("Failed to send email", e);
+        }
     }
 }
