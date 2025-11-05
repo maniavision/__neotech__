@@ -13,8 +13,8 @@ import com.template.springboottemplate.repository.UserRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.MessageSource;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,6 +27,7 @@ import org.thymeleaf.context.Context;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,22 +39,32 @@ public class UserService {
     final private PasswordEncoder encoder;
     final private JavaMailSender mailSender;
     final private TemplateEngine templateEngine;
+    final private MessageSource messageSource;
 
     // Character set for password generation
     private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
     private static final int PASSWORD_LENGTH = 12;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine) {
+    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine, MessageSource messageSource) {
         this.userRepo = userRepo;
         this.evtRepo = evtRepo;
         this.prtRepo = prtRepo;
         this.encoder = encoder;
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
+        this.messageSource = messageSource;
     }
 
     public User register(NewUserDto dto) {
+        // === Determine Locale ===
+        // This is a placeholder. You should get the locale from the request
+        // (e.g., from an 'Accept-Language' header in the controller or a 'lang' field in the DTO).
+        // For this example, we'll default to English.
+        Locale locale = Locale.FRENCH;
+        // To test French, use: Locale locale = Locale.FRENCH;
+        // ========================
+
         if (userRepo.findByEmail(dto.getEmail()).isPresent()) {
             throw new RuntimeException("Email already in use");
         }
@@ -70,16 +81,20 @@ public class UserService {
         evtRepo.save(evt);
 
         String link = "http://localhost:8080/api/auth/confirm?token=" + token;
-        // --- 3. Use the template ---
+        // --- Use MessageSource to get translated text ---
+        String title = messageSource.getMessage("email.register.title", null, locale);
+        String bodyText = messageSource.getMessage("email.register.body", null, locale);
+        String buttonText = messageSource.getMessage("email.register.button", null, locale);
+
         Context context = new Context();
-        context.setVariable("title", "Confirm Your Email");
-        context.setVariable("bodyText", "Welcome! Please click the button below to verify your email address and activate your account.");
-        context.setVariable("buttonText", "Verify Email");
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("buttonText", buttonText);
         context.setVariable("linkUrl", link);
 
         String htmlBody = templateEngine.process("email-template.html", context);
 
-        sendEmail(user.getEmail(), "Confirm your email", htmlBody);
+        sendEmail(user.getEmail(), title, htmlBody);
 
         return user;
     }
@@ -95,6 +110,9 @@ public class UserService {
     }
 
     public void confirmEmail(String token) {
+
+        Locale locale = Locale.FRENCH;
+
         EmailVerificationToken evt = evtRepo.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
         if (evt.getExpiryDate().isBefore(LocalDateTime.now())) {
@@ -110,17 +128,22 @@ public class UserService {
         user.setEnabled(true);
         userRepo.save(user);
 
-        // Send email with the new password
+        // --- Use MessageSource ---
+        String title = messageSource.getMessage("email.confirm.title", null, locale);
+        String bodyText = messageSource.getMessage("email.confirm.body", null, locale);
+        // Pass the new password as an argument for the {0} placeholder
+        Object[] args = { newPassword };
+        String infoText = messageSource.getMessage("email.confirm.infotext", args, locale);
+
         Context context = new Context();
-        context.setVariable("title", "Registration Confirmed");
-        context.setVariable("bodyText", "Your account has been successfully activated. Your temporary password is provided below. Please log in and change it.");
-        context.setVariable("infoText", "Your temporary password is: " + newPassword );
-        // We set linkUrl to null so the button doesn't appear
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("infoText", infoText);
         context.setVariable("linkUrl", null);
 
         String htmlBody = templateEngine.process("email-template.html", context);
         sendEmail(user.getEmail(),
-                "Registration Confirmed",
+                title,
                 htmlBody);
 
         // Delete the token
@@ -134,6 +157,7 @@ public class UserService {
     }
 
     public void requestPasswordReset(String email) {
+        Locale locale = Locale.ENGLISH;
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         String token = UUID.randomUUID().toString();
@@ -144,14 +168,19 @@ public class UserService {
         prtRepo.save(prt);
 
         String link = "http://localhost:8080/api/auth/reset-password?token=" + token;
+        // --- Use MessageSource ---
+        String title = messageSource.getMessage("email.reset.title", null, locale);
+        String bodyText = messageSource.getMessage("email.reset.body", null, locale);
+        String buttonText = messageSource.getMessage("email.reset.button", null, locale);
+
         Context context = new Context();
-        context.setVariable("title", "Password Reset Request");
-        context.setVariable("bodyText", "You requested to reset your password. Click the button below to proceed.");
-        context.setVariable("buttonText", "Reset Password");
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("buttonText", buttonText);
         context.setVariable("linkUrl", link);
 
         String htmlBody = templateEngine.process("email-template.html", context);
-        sendEmail(email, "Reset Your Password", htmlBody);
+        sendEmail(email, title, htmlBody);
     }
 
     public void resetPassword(ResetPasswordDto dto) {
