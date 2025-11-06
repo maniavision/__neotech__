@@ -34,7 +34,7 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ServiceRequest> getRequestById(@PathVariable String id) {
+    public ResponseEntity<ServiceRequest> getRequestById(@PathVariable Long id) {
         ServiceRequest request = requestService.getRequestById(id);
         return ResponseEntity.ok(request);
     }

@@ -12,6 +12,8 @@ import com.template.springboottemplate.repository.PasswordResetTokenRepository;
 import com.template.springboottemplate.repository.UserRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.ClassPathResource;
@@ -33,6 +35,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     final private UserRepository userRepo;
     final private EmailVerificationTokenRepository evtRepo;
     final private PasswordResetTokenRepository prtRepo;
@@ -62,16 +66,19 @@ public class UserService {
         // (e.g., from an 'Accept-Language' header in the controller or a 'lang' field in the DTO).
         // For this example, we'll default to English.
         Locale locale = Locale.FRENCH;
+        log.info("Attempting to register new user with email: {}", dto.getEmail());
         // To test French, use: Locale locale = Locale.FRENCH;
         // ========================
 
         if (userRepo.findByEmail(dto.getEmail()).isPresent()) {
+            log.warn("Registration failed: Email already in use: {}", dto.getEmail());
             throw new RuntimeException("Email already in use");
         }
         User user = new User();
         BeanUtils.copyProperties(dto, user);
         user.setPassword(encoder.encode(dto.getPassword()));
         user = userRepo.save(user);
+        log.info("Successfully saved new user with ID: {}", user.getId());
 
         String token = UUID.randomUUID().toString();
         EmailVerificationToken evt = new EmailVerificationToken();
@@ -79,6 +86,7 @@ public class UserService {
         evt.setUser(user);
         evt.setExpiryDate(LocalDateTime.now().plusHours(24));
         evtRepo.save(evt);
+        log.info("Generated and saved email verification token for user {}", user.getId());
 
         String link = "http://localhost:8080/api/auth/confirm?token=" + token;
         // --- Use MessageSource to get translated text ---
@@ -95,7 +103,7 @@ public class UserService {
         String htmlBody = templateEngine.process("email-template.html", context);
 
         sendEmail(user.getEmail(), title, htmlBody);
-
+        log.info("Sent registration email to {}", user.getEmail());
         return user;
     }
 
@@ -112,13 +120,26 @@ public class UserService {
     public void confirmEmail(String token) {
 
         Locale locale = Locale.FRENCH;
+        log.info("Attempting to confirm email with token: {}", token);
 
         EmailVerificationToken evt = evtRepo.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> {
+                    log.warn("Invalid token used for email confirmation: {}", token);
+                    return new RuntimeException("Invalid token");
+                });
+
         if (evt.getExpiryDate().isBefore(LocalDateTime.now())) {
+            log.warn("Expired token used for email confirmation: {}", token);
+            evtRepo.delete(evt);
             throw new RuntimeException("Token expired");
         }
         User user = evt.getUser();
+
+        if (user.isEnabled()) {
+            log.warn("Email confirmation attempted for already enabled user: {}", user.getEmail());
+            evtRepo.delete(evt); // Clean up the used token
+            return; // Exit the method early
+        }
 
         // Generate a new password
         String newPassword = generateRandomPassword();
@@ -127,7 +148,7 @@ public class UserService {
         user.setPassword(encoder.encode(newPassword));
         user.setEnabled(true);
         userRepo.save(user);
-
+        log.info("Successfully enabled user and set new password for: {}", user.getEmail());
         // --- Use MessageSource ---
         String title = messageSource.getMessage("email.confirm.title", null, locale);
         String bodyText = messageSource.getMessage("email.confirm.body", null, locale);
@@ -146,27 +167,34 @@ public class UserService {
                 title,
                 htmlBody);
 
-        // Delete the token
+        log.info("Sent temporary password email to: {}", user.getEmail());
         evtRepo.delete(evt);
+        log.info("Deleted used email verification token: {}", token);
     }
 
     public String login(AuthRequest dto, AuthenticationManager authManager, JwtTokenProvider jwtProvider) {
+        log.info("Attempting login for user: {}", dto.getEmail());
         Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword()));
+        log.info("Login successful, token generated for: {}", dto.getEmail());
         return jwtProvider.generateToken(auth);
     }
 
     public void requestPasswordReset(String email) {
         Locale locale = Locale.ENGLISH;
+        log.info("Processing password reset request for email: {}", email);
         User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> {
+                    log.warn("Password reset request for non-existent user: {}", email);
+                    return new RuntimeException("User not found");
+                });
         String token = UUID.randomUUID().toString();
         PasswordResetToken prt = new PasswordResetToken();
         prt.setToken(token);
         prt.setUser(user);
         prt.setExpiryDate(LocalDateTime.now().plusHours(1));
         prtRepo.save(prt);
-
+        log.info("Saved password reset token for user: {}", email);
         String link = "http://localhost:8080/api/auth/reset-password?token=" + token;
         // --- Use MessageSource ---
         String title = messageSource.getMessage("email.reset.title", null, locale);
@@ -181,18 +209,27 @@ public class UserService {
 
         String htmlBody = templateEngine.process("email-template.html", context);
         sendEmail(email, title, htmlBody);
+        log.info("Sent password reset email to: {}", email);
     }
 
     public void resetPassword(ResetPasswordDto dto) {
+        log.info("Attempting to reset password with token: {}", dto.getToken());
         PasswordResetToken prt = prtRepo.findByToken(dto.getToken())
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> {
+                    log.warn("Invalid token used for password reset: {}", dto.getToken());
+                    return new RuntimeException("Invalid token");
+                });
+
         if (prt.getExpiryDate().isBefore(LocalDateTime.now())) {
+            log.warn("Expired token used for password reset: {}", dto.getToken());
             throw new RuntimeException("Token expired");
         }
+
         User user = prt.getUser();
         user.setPassword(encoder.encode(dto.getNewPassword()));
         userRepo.save(user);
         prtRepo.delete(prt);
+        log.info("Successfully reset password for user: {}", user.getEmail());
     }
 
     public User getUserByEmail(String email) {
@@ -212,10 +249,10 @@ public class UserService {
             // "logo" is the Content-ID (CID) used in the <img> tag (src="cid:logo")
             ClassPathResource logo = new ClassPathResource("static/images/logo.png");
             helper.addInline("logo", logo);
-
             mailSender.send(mimeMessage);
+            log.info("Email sent successfully to {} with subject: {}", to, subject);
         } catch (MessagingException e) {
-            // Handle exception (e.g., log it)
+            log.error("Failed to send email to {} with subject: {}", to, subject, e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
