@@ -28,6 +28,9 @@ public class    User {
 
     private boolean enabled = false;
 
+    @Column(name = "profile_image")
+    private String profileImage;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
@@ -104,5 +107,13 @@ public class    User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 }

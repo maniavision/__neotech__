@@ -15,6 +15,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -24,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
     final private UserRepository userRepo;
     final private EmailVerificationTokenRepository evtRepo;
     final private PasswordResetTokenRepository prtRepo;
@@ -44,13 +48,14 @@ public class UserService {
     final private JavaMailSender mailSender;
     final private TemplateEngine templateEngine;
     final private MessageSource messageSource;
+    final private FileStorageService fileStorageService;
 
     // Character set for password generation
     private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
     private static final int PASSWORD_LENGTH = 12;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine, MessageSource messageSource) {
+    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine, MessageSource messageSource, FileStorageService fileStorageService) {
         this.userRepo = userRepo;
         this.evtRepo = evtRepo;
         this.prtRepo = prtRepo;
@@ -58,6 +63,7 @@ public class UserService {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
         this.messageSource = messageSource;
+        this.fileStorageService = fileStorageService;
     }
 
     public User register(NewUserDto dto) {
@@ -99,6 +105,7 @@ public class UserService {
         context.setVariable("bodyText", bodyText);
         context.setVariable("buttonText", buttonText);
         context.setVariable("linkUrl", link);
+        context.setVariable("baseUrl", frontendUrl);
 
         String htmlBody = templateEngine.process("email-template.html", context);
 
@@ -161,6 +168,7 @@ public class UserService {
         context.setVariable("bodyText", bodyText);
         context.setVariable("infoText", infoText);
         context.setVariable("linkUrl", null);
+        context.setVariable("baseUrl", frontendUrl);
 
         String htmlBody = templateEngine.process("email-template.html", context);
         sendEmail(user.getEmail(),
@@ -206,6 +214,7 @@ public class UserService {
         context.setVariable("bodyText", bodyText);
         context.setVariable("buttonText", buttonText);
         context.setVariable("linkUrl", link);
+        context.setVariable("baseUrl", frontendUrl);
 
         String htmlBody = templateEngine.process("email-template.html", context);
         sendEmail(email, title, htmlBody);
@@ -255,5 +264,15 @@ public class UserService {
             log.error("Failed to send email to {} with subject: {}", to, subject, e);
             throw new RuntimeException("Failed to send email", e);
         }
+    }
+
+    public void updateProfileImage(Long userId, MultipartFile file) {
+        log.info("Updating profile image for user ID: {}", userId);
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String fileName = fileStorageService.storeFile(file);
+        user.setProfileImage(fileName);
+        userRepo.save(user);
+        log.info("Successfully updated profile image for user ID: {}", userId);
     }
 }
