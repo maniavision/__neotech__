@@ -1,0 +1,88 @@
+steps:
+  # 1. Build the Spring Boot application (.jar)
+  - name: 'gcr.io/cloud-builders/mvn'
+    id: 'Build'
+    args: ['package', '-DskipTests']
+
+  # 2. Build the Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Image'
+    args:
+      - 'build'
+      - '-t'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+      - '.'
+
+  # 3. Push the Docker Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+
+  # 4. Scan the Image for Vulnerabilities
+  - name: 'gcr.io/google.com/cloudsdktool/gcloud'
+    id: 'Scan Image'
+    entrypoint: gcloud
+    args:
+      - 'beta'
+      - 'artifacts'
+      - 'docker'
+      - 'images'
+      - 'scan'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+      - '--location=${_LOCATION}'
+      # Recommendation: Fail the build on high-severity issues in prod
+      # - '--fail-on-severity=HIGH'
+
+  # 5. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/gcloud'
+    id: 'Deploy'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}-${_ENV}' # e.g., 'neotech-api-dev'
+      - '--image=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+      - '--region=${_LOCATION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated' # Remove this if your API is not public
+
+      # --- BEST PRACTICE: INJECT SECRETS ---
+      # This maps the *name* of the secret in Secret Manager (e.g., neotech-db-pass)
+      # to the *environment variable* name (e.g., SPRING_DATASOURCE_PASSWORD).
+      - '--set-secrets=SPRING_DATASOURCE_USERNAME=neotech-db-user:latest'
+      - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neotech-db-pass:latest'
+      - '--set-secrets=SPRING_MAIL_USERNAME=neotech-mail-user:latest'
+      - '--set-secrets=SPRING_MAIL_PASSWORD=neotech-mail-pass:latest'
+      - '--set-secrets=JWT_SECRET=neotech-jwt-secret:latest'
+
+      # --- SET ENVIRONMENT-SPECIFIC VARIABLES ---
+      # These are configs that change per environment but are not secret.
+      - '--set-env-vars=SPRING_PROFILES_ACTIVE=${_ENV}'
+      - '--set-env-vars=SPRING_DATASOURCE_URL=${_DB_URL}'
+      - '--set-env-vars=APP_FRONTEND_URL=${_FRONTEND_URL}'
+
+      # --- CONNECT TO CLOUD SQL (Example) ---
+      # This is required if your _DB_URL is a Cloud SQL instance.
+      # The value for _CLOUD_SQL_INSTANCE would be set in your trigger.
+      # - '--set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}'
+
+# Define the images that will be created
+images:
+  - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+
+# Define available substitutions
+options:
+  substitution_option: 'ALLOW_LOOSE'
+substitutions:
+  # Default values (overridden by triggers)
+  _ENV: 'dev'
+  _LOCATION: 'us-central1'
+  _AR_REPO: 'neotech-repo'
+  _SERVICE_NAME: 'neotech-api'
+  _DB_URL: 'jdbc:mysql://localhost:3306/neotech?useSSL=false' # Dev default
+  _FRONTEND_URL: 'http://localhost:4200' # Dev default
+  # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
+
+timeout: '1600s'
