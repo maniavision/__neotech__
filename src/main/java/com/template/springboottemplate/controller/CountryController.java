@@ -1,12 +1,13 @@
 package com.template.springboottemplate.controller;
 
 import com.template.springboottemplate.model.Country;
-import com.template.springboottemplate.repository.CountryRepository;
+import com.template.springboottemplate.service.CountryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -16,10 +17,10 @@ import java.util.List;
 public class CountryController {
 
     private static final Logger log = LoggerFactory.getLogger(CountryController.class);
-    private final CountryRepository countryRepository;
+    private final CountryService countryService;
 
-    public CountryController(CountryRepository countryRepository) {
-        this.countryRepository = countryRepository;
+    public CountryController(CountryService countryService) {
+        this.countryService = countryService;
     }
 
     @GetMapping
@@ -27,6 +28,14 @@ public class CountryController {
         log.info("Fetching all countries");
         // You might want to sort these by name for easier frontend display
         // e.g., countryRepository.findAll(Sort.by("name"))
-        return ResponseEntity.ok(countryRepository.findAll());
+        return ResponseEntity.ok(countryService.getAllCountries());
+    }
+    @GetMapping("/suggested-countries")
+    public List<Country> getCountrySuggestions(@RequestParam(name = "query", required = false, defaultValue = "") String query) {
+        // Basic validation: Don't query if input is too short
+        if (query == null || query.trim().length() < 2) {
+            return List.of(); // Return empty list
+        }
+        return countryService.findCountryByNameContainingIgnoreCase(query.trim());
     }
 }
