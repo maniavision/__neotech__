@@ -35,6 +35,10 @@ public class    User {
     @Column(nullable = false)
     private Role role = Role.USER;
 
+    @ManyToOne
+    @JoinColumn(name = "country_code")
+    private Country country;
+
     // getters/setters
 
     public Long getId() {
@@ -115,5 +119,13 @@ public class    User {
 
     public void setProfileImage(String profileImage) {
         this.profileImage = profileImage;
+    }
+
+    public Country getCountry() {
+        return country;
+    }
+
+    public void setCountry(Country country) {
+        this.country = country;
     }
 }

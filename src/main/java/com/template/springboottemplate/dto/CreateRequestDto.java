@@ -9,9 +9,7 @@ import java.util.List;
 public class CreateRequestDto {
     private String firstName;
     private String lastName;
-
     private String companyName;
-
     private String email;
     private String phone;
     private String title;
@@ -19,6 +17,7 @@ public class CreateRequestDto {
     private String description;
     private String budgetRange;
     private LocalDate expectedDueDate;
+    private String countryCode;
     private List<MultipartFile> attachments;
 
     public String getFirstName() {
@@ -107,5 +106,11 @@ public class CreateRequestDto {
 
     public void setExpectedDueDate(LocalDate expectedDueDate) {
         this.expectedDueDate = expectedDueDate;
+    }
+    public String getCountryCode() {
+        return countryCode;
+    }
+    public void setCountryCode(String countryCode) {
+        this.countryCode = countryCode;
     }
 }

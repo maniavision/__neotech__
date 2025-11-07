@@ -4,9 +4,11 @@ import com.template.springboottemplate.config.JwtTokenProvider;
 import com.template.springboottemplate.dto.AuthRequest;
 import com.template.springboottemplate.dto.NewUserDto;
 import com.template.springboottemplate.dto.ResetPasswordDto;
+import com.template.springboottemplate.model.Country;
 import com.template.springboottemplate.model.EmailVerificationToken;
 import com.template.springboottemplate.model.PasswordResetToken;
 import com.template.springboottemplate.model.User;
+import com.template.springboottemplate.repository.CountryRepository;
 import com.template.springboottemplate.repository.EmailVerificationTokenRepository;
 import com.template.springboottemplate.repository.PasswordResetTokenRepository;
 import com.template.springboottemplate.repository.UserRepository;
@@ -49,13 +51,14 @@ public class UserService {
     final private TemplateEngine templateEngine;
     final private MessageSource messageSource;
     final private FileStorageService fileStorageService;
+    final private CountryRepository countryRepo;
 
     // Character set for password generation
     private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
     private static final int PASSWORD_LENGTH = 12;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine, MessageSource messageSource, FileStorageService fileStorageService) {
+    public UserService(UserRepository userRepo, EmailVerificationTokenRepository evtRepo, PasswordResetTokenRepository prtRepo, PasswordEncoder encoder, JavaMailSender mailSender, TemplateEngine templateEngine, MessageSource messageSource, FileStorageService fileStorageService, CountryRepository countryRepo) {
         this.userRepo = userRepo;
         this.evtRepo = evtRepo;
         this.prtRepo = prtRepo;
@@ -64,6 +67,7 @@ public class UserService {
         this.templateEngine = templateEngine;
         this.messageSource = messageSource;
         this.fileStorageService = fileStorageService;
+        this.countryRepo = countryRepo;
     }
 
     public User register(NewUserDto dto) {
@@ -80,6 +84,14 @@ public class UserService {
             log.warn("Registration failed: Email already in use: {}", dto.getEmail());
             throw new RuntimeException("Email already in use");
         }
+
+        Country country = countryRepo.findById(dto.getCountryCode())
+                .orElseThrow(() -> {
+                    log.error("Registration failed: Invalid country code provided: {}", dto.getCountryCode());
+                    return new RuntimeException("Invalid country code");
+                });
+        log.debug("Verified country: {} ({})", country.getName(), country.getCode());
+
         User user = new User();
         BeanUtils.copyProperties(dto, user);
         user.setPassword(encoder.encode(dto.getPassword()));

@@ -11,14 +11,18 @@ public class NewUserDto {
     @Email @NotBlank String email;
     String phone;
     @NotBlank @Size(min = 8) String password;
+    @NotBlank
+    private String countryCode;
 
-    public NewUserDto(String firstName, String lastName, String companyName, String email, String phone, String password) {
+    public NewUserDto(String firstName, String lastName, String companyName, String email, String phone, String password
+            , String countryCode) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.companyName = companyName;
         this.email = email;
         this.phone = phone;
         this.password = password;
+        this.countryCode = countryCode;
     }
 
     public String getFirstName() {
@@ -68,4 +72,6 @@ public class NewUserDto {
     public void setPassword(String password) {
         this.password = password;
     }
+    public String getCountryCode() { return countryCode; }
+    public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
 }

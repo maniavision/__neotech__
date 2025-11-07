@@ -21,14 +21,10 @@ import java.util.UUID;
 
 @Service
 public class RequestService {
-
     private static final Logger log = LoggerFactory.getLogger(RequestService.class);
     final private ServiceRequestRepository serviceRequestRepository;
-
     final private UserRepository userRepository;
-
     final private UserService userService;
-
     final private FileStorageService fileStorageService;
 
     public RequestService(ServiceRequestRepository serviceRequestRepository, UserRepository userRepository, UserService userService, FileStorageService fileStorageService) {
@@ -50,7 +46,8 @@ public class RequestService {
                     requestData.getCompanyName(),
                     requestData.getEmail(),
                     requestData.getPhone(),
-                    UUID.randomUUID().toString()
+                    UUID.randomUUID().toString(),
+                    requestData.getCountryCode()
             );
             user = userService.register(newUserDto);
             log.info("New user registered with ID: {}", user.getId());
