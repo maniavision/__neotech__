@@ -48,6 +48,7 @@ steps:
       - '--region=${_LOCATION}'
       - '--platform=managed'
       - '--allow-unauthenticated' # Remove this if your API is not public
+      - '--set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}'
 
       # --- BEST PRACTICE: INJECT SECRETS ---
       # This maps the *name* of the secret in Secret Manager (e.g., neotech-db-pass)
@@ -84,6 +85,8 @@ substitutions:
   _SERVICE_NAME: 'neovation-backend-app'
   _DB_URL: 'jdbc:mysql://localhost:3306/neotech?useSSL=false' # Dev default
   _FRONTEND_URL: 'http://localhost:4200' # Dev default
+  _CLOUD_SQL_INSTANCE: mineral-trainer-477512-c2:us-east4:neovation-dev
+  #jdbc:mysql://google/neovation?cloudSqlInstance=mineral-trainer-477512-c2:us-east4:neovation-dev
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
 
 timeout: '1600s'
