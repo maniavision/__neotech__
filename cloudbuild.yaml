@@ -1,7 +1,8 @@
 steps:
   # 1. Build the Spring Boot application (.jar)
-  - name: 'gcr.io/cloud-builders/mvn'
+  - name: 'maven:3.9-eclipse-temurin-21-jammy'
     id: 'Build'
+    entrypoint: 'mvn'
     args: ['package', '-DskipTests']
 
   # 2. Build the Docker Image
