@@ -56,7 +56,7 @@ steps:
       - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neovation-db-pass:latest'
       - '--set-secrets=SPRING_MAIL_USERNAME=neovation-mail-user:latest'
       - '--set-secrets=SPRING_MAIL_PASSWORD=neovation-mail-pass:latest'
-      - '--set-secrets=JWT_SECRET=neotech-jwt-secret:latest'
+      - '--set-secrets=JWT_SECRET=neovation-jwt-secret:latest'
 
       # --- SET ENVIRONMENT-SPECIFIC VARIABLES ---
       # These are configs that change per environment but are not secret.
