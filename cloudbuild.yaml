@@ -51,10 +51,10 @@ steps:
       # --- BEST PRACTICE: INJECT SECRETS ---
       # This maps the *name* of the secret in Secret Manager (e.g., neotech-db-pass)
       # to the *environment variable* name (e.g., SPRING_DATASOURCE_PASSWORD).
-      - '--set-secrets=SPRING_DATASOURCE_USERNAME=neotech-db-user:latest'
-      - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neotech-db-pass:latest'
-      - '--set-secrets=SPRING_MAIL_USERNAME=neotech-mail-user:latest'
-      - '--set-secrets=SPRING_MAIL_PASSWORD=neotech-mail-pass:latest'
+      - '--set-secrets=SPRING_DATASOURCE_USERNAME=neovation-db-user:latest'
+      - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neovation-db-pass:latest'
+      - '--set-secrets=SPRING_MAIL_USERNAME=neovation-mail-user:latest'
+      - '--set-secrets=SPRING_MAIL_PASSWORD=neovation-mail-pass:latest'
       - '--set-secrets=JWT_SECRET=neotech-jwt-secret:latest'
 
       # --- SET ENVIRONMENT-SPECIFIC VARIABLES ---
@@ -75,7 +75,6 @@ images:
 # Define available substitutions
 options:
   logging: CLOUD_LOGGING_ONLY
-  substitution_option: 'ALLOW_LOOSE'
 substitutions:
   # Default values (overridden by triggers)
   _ENV: 'dev'
