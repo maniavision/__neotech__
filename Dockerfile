@@ -1,6 +1,6 @@
 # --- Build Stage ---
 # Use a Maven image with a stable JDK (e.g., Temurin 21) to build the app
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM maven:3.9-eclipse-temurin-21
 
 # Set the working directory
 WORKDIR /app
