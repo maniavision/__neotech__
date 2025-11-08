@@ -37,7 +37,7 @@ steps:
       # - '--fail-on-severity=HIGH'
 
   # 5. Deploy to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy'
     entrypoint: gcloud
     args:
