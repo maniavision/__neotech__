@@ -15,15 +15,15 @@ steps:
       - '.'
 
   # 3. Push the Docker Image to Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'Push Image'
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Scan Image'
     args:
       - 'push'
       - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
 
   # 4. Scan the Image for Vulnerabilities
-  - name: 'gcr.io/google.com/cloudsdktool/gcloud'
-    id: 'Scan Image'
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy'
     entrypoint: gcloud
     args:
       - 'beta'
