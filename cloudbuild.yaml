@@ -90,4 +90,4 @@ substitutions:
   #jdbc:mysql://google/neovation?cloudSqlInstance=mineral-trainer-477512-c2:us-east4:neovation-dev
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
 
-timeout: '1600s'
+timeout: '2600s'
