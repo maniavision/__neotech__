@@ -25,7 +25,7 @@ COPY src ./src
 RUN mvn package -DskipTests
 
 # --- Run Stage ---
-FROM gcr.io/distroless/java21-debian11
+FROM gcr.io/distroless/java21-debian12
 WORKDIR /app
 COPY --from=builder /app/target/*.jar /app/app.jar
 EXPOSE 8080
