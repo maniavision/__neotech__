@@ -32,7 +32,7 @@ steps:
       - 'images'
       - 'scan'
       - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
-      - '--location=${_LOCATION}'
+      - '--location=us'
       # Recommendation: Fail the build on high-severity issues in prod
       # - '--fail-on-severity=HIGH'
 
