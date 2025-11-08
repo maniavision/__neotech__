@@ -2,7 +2,7 @@ steps:
   # 1. Build the Spring Boot application (.jar)
   - name: 'gcr.io/cloud-builders/mvn'
     id: 'Build'
-    args: ['clean', 'install']
+    args: ['package', '-DskipTests']
 
   # 2. Build the Docker Image
   - name: 'gcr.io/cloud-builders/docker'
