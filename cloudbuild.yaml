@@ -2,7 +2,7 @@ steps:
   # 1. Build the Spring Boot application (.jar)
   - name: 'gcr.io/cloud-builders/mvn'
     id: 'Build'
-    args: ['package', '-DskipTests']
+    args: ['clean', 'install']
 
   # 2. Build the Docker Image
   - name: 'gcr.io/cloud-builders/docker'
@@ -79,8 +79,8 @@ substitutions:
   # Default values (overridden by triggers)
   _ENV: 'dev'
   _LOCATION: 'us-central1'
-  _AR_REPO: 'neotech-repo'
-  _SERVICE_NAME: 'neotech-api'
+  _AR_REPO: 'neovation-repo'
+  _SERVICE_NAME: 'neovation-api'
   _DB_URL: 'jdbc:mysql://localhost:3306/neotech?useSSL=false' # Dev default
   _FRONTEND_URL: 'http://localhost:4200' # Dev default
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
