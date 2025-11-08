@@ -79,9 +79,9 @@ options:
 substitutions:
   # Default values (overridden by triggers)
   _ENV: 'dev'
-  _LOCATION: 'us-central1'
+  _LOCATION: 'us-east4'
   _AR_REPO: 'neovation-repo'
-  _SERVICE_NAME: 'neovation-api'
+  _SERVICE_NAME: 'neovation-backend-app'
   _DB_URL: 'jdbc:mysql://localhost:3306/neotech?useSSL=false' # Dev default
   _FRONTEND_URL: 'http://localhost:4200' # Dev default
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
