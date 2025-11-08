@@ -49,7 +49,8 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated' # Remove this if your API is not public
       - '--set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}'
-
+      - '--startup-cpu-boost'
+      - '--timeout=300'
       # --- BEST PRACTICE: INJECT SECRETS ---
       # This maps the *name* of the secret in Secret Manager (e.g., neotech-db-pass)
       # to the *environment variable* name (e.g., SPRING_DATASOURCE_PASSWORD).
