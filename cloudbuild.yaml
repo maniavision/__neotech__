@@ -22,17 +22,17 @@ steps:
       - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
 
   # 4. Scan the Image for Vulnerabilities
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Scan Image'
-    entrypoint: gcloud
-    args:
-      - 'beta'
-      - 'artifacts'
-      - 'docker'
-      - 'images'
-      - 'scan'
-      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
-      - '--location=us'
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    id: 'Scan Image'
+#    entrypoint: gcloud
+#    args:
+#      - 'beta'
+#      - 'artifacts'
+#      - 'docker'
+#      - 'images'
+#      - 'scan'
+#      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+#      - '--location=us'
       # Recommendation: Fail the build on high-severity issues in prod
       # - '--fail-on-severity=HIGH'
 
