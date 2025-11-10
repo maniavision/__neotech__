@@ -282,8 +282,9 @@ public class UserService {
         log.info("Updating profile image for user ID: {}", userId);
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        String fileName = fileStorageService.storeFile(file);
-        user.setProfileImage(fileName);
+        String gcsPath = fileStorageService.storeFile(file, userId);
+        // Store the GCS path in the profileImage field
+        user.setProfileImage(gcsPath);
         userRepo.save(user);
         log.info("Successfully updated profile image for user ID: {}", userId);
     }
