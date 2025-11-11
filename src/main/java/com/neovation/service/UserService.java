@@ -94,6 +94,7 @@ public class UserService {
 
         User user = new User();
         BeanUtils.copyProperties(dto, user);
+        user.setCountry(country);
         user.setPassword(encoder.encode(dto.getPassword()));
         user = userRepo.save(user);
         log.info("Successfully saved new user with ID: {}", user.getId());
