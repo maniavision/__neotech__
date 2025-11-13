@@ -33,12 +33,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtFilter)
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtFilter, CorsConfigurationSource corsConfigurationSource)
             throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/requests/**").permitAll()
                         .requestMatchers("/api/countries/**").permitAll()

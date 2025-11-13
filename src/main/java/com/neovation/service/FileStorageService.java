@@ -21,6 +21,9 @@ public class FileStorageService {
     @Value("${gcs.bucket.name}")
     private String bucketName;
 
+    @Value("${gcs.profile.bucket.name}")
+    private String bucketProfileName;
+
     public FileStorageService(Storage storage) {
         this.storage = storage;
     }
@@ -67,5 +70,36 @@ public class FileStorageService {
             log.error("Failed to store file '{}' to GCS", originalFilename, ex);
             throw new RuntimeException("Could not store file " + originalFilename, ex);
         }
+    }
+
+    public String uploadFile(MultipartFile file, String folderName, String fileName) throws IOException {
+        // 1. Get file extension
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+
+        // 2. Create a unique blob name to prevent browser caching issues
+        // e.g., "123/profile-a1b2c3d4.png"
+        String uniqueFileName = fileName + "-" + UUID.randomUUID() + extension;
+        String blobName = folderName + "/" + uniqueFileName;
+
+        // 3. Configure the blob
+        BlobId blobId = BlobId.of(bucketName, blobName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(file.getContentType())
+                .build();
+
+        // 4. Upload the file
+        log.info("Uploading file to GCS: gs://{}/{}", bucketName, blobName);
+        storage.create(blobInfo, file.getBytes());
+
+        // 5. Return the public URL
+        // This assumes the bucket is public or has "Storage Object Viewer"
+        // permission for "allUsers".
+        String publicUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, blobName);
+        log.info("File uploaded successfully to: {}", publicUrl);
+        return publicUrl;
     }
 }
