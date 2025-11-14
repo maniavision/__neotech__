@@ -2,6 +2,7 @@ package com.neovation.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,14 +34,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtFilter)
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtFilter, CorsConfigurationSource corsConfigurationSource)
             throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/requests/**").permitAll()
+                        // Allow anyone to create a new request
+                        .requestMatchers(HttpMethod.POST, "/api/requests").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/requests/**").authenticated()
                         .requestMatchers("/api/countries/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

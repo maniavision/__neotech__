@@ -8,9 +8,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin
+//@CrossOrigin
 public class UserController {
 
     private final UserService userService;
@@ -29,7 +31,11 @@ public class UserController {
     public ResponseEntity<?> uploadProfileImage(@AuthenticationPrincipal UserDetails userDetails,
                                                 @RequestParam("file") MultipartFile file) {
         User user = userService.getUserByEmail(userDetails.getUsername());
-        userService.updateProfileImage(user.getId(), file);
-        return ResponseEntity.ok().body("{\"message\": \"Profile image updated successfully\"}");
+
+        // This method now returns the public URL
+        String publicUrl = userService.updateProfileImage(user.getId(), file);
+
+        // Return the URL in the response body
+        return ResponseEntity.ok().body(Map.of("profileImageUrl", publicUrl));
     }
 }

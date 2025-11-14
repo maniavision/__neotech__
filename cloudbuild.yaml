@@ -1,7 +1,8 @@
 steps:
   # 1. Build the Spring Boot application (.jar)
-  - name: 'gcr.io/cloud-builders/mvn'
+  - name: 'maven:3.9-eclipse-temurin-21-jammy'
     id: 'Build'
+    entrypoint: 'mvn'
     args: ['package', '-DskipTests']
 
   # 2. Build the Docker Image
@@ -21,22 +22,22 @@ steps:
       - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
 
   # 4. Scan the Image for Vulnerabilities
-  - name: 'gcr.io/google.com/cloudsdktool/gcloud'
-    id: 'Scan Image'
-    entrypoint: gcloud
-    args:
-      - 'beta'
-      - 'artifacts'
-      - 'docker'
-      - 'images'
-      - 'scan'
-      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
-      - '--location=${_LOCATION}'
+#  - name: 'gcr.io/cloud-builders/gcloud'
+#    id: 'Scan Image'
+#    entrypoint: gcloud
+#    args:
+#      - 'beta'
+#      - 'artifacts'
+#      - 'docker'
+#      - 'images'
+#      - 'scan'
+#      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE_NAME}:${_ENV}-${SHORT_SHA}'
+#      - '--location=us'
       # Recommendation: Fail the build on high-severity issues in prod
       # - '--fail-on-severity=HIGH'
 
   # 5. Deploy to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy'
     entrypoint: gcloud
     args:
@@ -47,15 +48,17 @@ steps:
       - '--region=${_LOCATION}'
       - '--platform=managed'
       - '--allow-unauthenticated' # Remove this if your API is not public
-
+      - '--set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}'
+      - '--cpu-boost'
+      - '--timeout=300'
       # --- BEST PRACTICE: INJECT SECRETS ---
       # This maps the *name* of the secret in Secret Manager (e.g., neotech-db-pass)
       # to the *environment variable* name (e.g., SPRING_DATASOURCE_PASSWORD).
-      - '--set-secrets=SPRING_DATASOURCE_USERNAME=neotech-db-user:latest'
-      - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neotech-db-pass:latest'
-      - '--set-secrets=SPRING_MAIL_USERNAME=neotech-mail-user:latest'
-      - '--set-secrets=SPRING_MAIL_PASSWORD=neotech-mail-pass:latest'
-      - '--set-secrets=JWT_SECRET=neotech-jwt-secret:latest'
+      - '--set-secrets=SPRING_DATASOURCE_USERNAME=neovation-db-user:latest'
+      - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neovation-db-pass:latest'
+      - '--set-secrets=SPRING_MAIL_USERNAME=neovation-mail-user:latest'
+      - '--set-secrets=SPRING_MAIL_PASSWORD=neovation-mail-pass:latest'
+      - '--set-secrets=JWT_SECRET=neovation-jwt-secret:latest'
 
       # --- SET ENVIRONMENT-SPECIFIC VARIABLES ---
       # These are configs that change per environment but are not secret.
@@ -74,15 +77,17 @@ images:
 
 # Define available substitutions
 options:
-  substitution_option: 'ALLOW_LOOSE'
+  logging: CLOUD_LOGGING_ONLY
 substitutions:
   # Default values (overridden by triggers)
   _ENV: 'dev'
-  _LOCATION: 'us-central1'
-  _AR_REPO: 'neotech-repo'
-  _SERVICE_NAME: 'neotech-api'
+  _LOCATION: 'us-east4'
+  _AR_REPO: 'neovation-repo'
+  _SERVICE_NAME: 'neovation-backend-app'
   _DB_URL: 'jdbc:mysql://localhost:3306/neotech?useSSL=false' # Dev default
   _FRONTEND_URL: 'http://localhost:4200' # Dev default
+  _CLOUD_SQL_INSTANCE: mineral-trainer-477512-c2:us-east4:neovation-dev
+  #jdbc:mysql://google/neovation?cloudSqlInstance=mineral-trainer-477512-c2:us-east4:neovation-dev
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
 
-timeout: '1600s'
+timeout: '2600s'

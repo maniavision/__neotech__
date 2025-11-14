@@ -31,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Locale;
@@ -75,7 +76,7 @@ public class UserService {
         // This is a placeholder. You should get the locale from the request
         // (e.g., from an 'Accept-Language' header in the controller or a 'lang' field in the DTO).
         // For this example, we'll default to English.
-        Locale locale = Locale.FRENCH;
+        Locale locale = Locale.ENGLISH;
         log.info("Attempting to register new user with email: {}", dto.getEmail());
         // To test French, use: Locale locale = Locale.FRENCH;
         // ========================
@@ -94,6 +95,7 @@ public class UserService {
 
         User user = new User();
         BeanUtils.copyProperties(dto, user);
+        user.setCountry(country);
         user.setPassword(encoder.encode(dto.getPassword()));
         user = userRepo.save(user);
         log.info("Successfully saved new user with ID: {}", user.getId());
@@ -138,7 +140,7 @@ public class UserService {
 
     public void confirmEmail(String token) {
 
-        Locale locale = Locale.FRENCH;
+        Locale locale = Locale.ENGLISH;
         log.info("Attempting to confirm email with token: {}", token);
 
         EmailVerificationToken evt = evtRepo.findByToken(token)
@@ -278,13 +280,39 @@ public class UserService {
         }
     }
 
-    public void updateProfileImage(Long userId, MultipartFile file) {
+//    public void updateProfileImage(Long userId, MultipartFile file) {
+//        log.info("Updating profile image for user ID: {}", userId);
+//        User user = userRepo.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//        String gcsPath = fileStorageService.storeFile(file, userId);
+//        // Store the GCS path in the profileImage field
+//        user.setProfileImage(gcsPath);
+//        userRepo.save(user);
+//        log.info("Successfully updated profile image for user ID: {}", userId);
+//    }
+
+    public String updateProfileImage(Long userId, MultipartFile file) {
         log.info("Updating profile image for user ID: {}", userId);
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        String fileName = fileStorageService.storeFile(file);
-        user.setProfileImage(fileName);
-        userRepo.save(user);
-        log.info("Successfully updated profile image for user ID: {}", userId);
+
+        try {
+            // The folder name is the user's ID
+            String folderName = String.valueOf(user.getId());
+
+            // The base filename is "profile"
+            String publicUrl = fileStorageService.uploadFile(file, folderName, "profile");
+
+            // Save the new public URL to the user's profile
+            user.setProfileImage(publicUrl);
+            userRepo.save(user);
+            log.info("Successfully updated profile image for user ID: {}. URL: {}", userId, publicUrl);
+
+            // Return the URL to the controller
+            return publicUrl;
+        } catch (IOException e) {
+            log.error("Failed to upload profile image for user ID: {}", userId, e);
+            throw new RuntimeException("Could not store file: " + file.getOriginalFilename(), e);
+        }
     }
 }
