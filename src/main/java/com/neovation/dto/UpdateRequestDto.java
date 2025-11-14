@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class UpdateRequestDto {
+
+    private String title;
     private RequestStatus status;
     private String adminNotes;
     private ServiceType service;
@@ -72,4 +74,13 @@ public class UpdateRequestDto {
     public void setAttachments(List<MultipartFile> attachments) {
         this.attachments = attachments;
     }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
 }

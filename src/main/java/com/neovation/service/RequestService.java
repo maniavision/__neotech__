@@ -135,6 +135,9 @@ public class RequestService {
                 });
 
         // --- Update fields only if they are provided in the DTO ---
+        if (updateData.getTitle() != null) {
+            existingRequest.setTitle(updateData.getTitle());
+        }
 
         if (updateData.getStatus() != null) {
             existingRequest.setStatus(updateData.getStatus());
