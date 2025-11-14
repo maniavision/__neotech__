@@ -2,12 +2,14 @@ package com.neovation.service;
 
 import com.neovation.dto.CreateRequestDto;
 import com.neovation.dto.NewUserDto;
+import com.neovation.dto.UpdateRequestDto;
 import com.neovation.model.FileAttachment;
 import com.neovation.model.RequestStatus;
 import com.neovation.model.ServiceRequest;
 import com.neovation.model.User;
 import com.neovation.repository.ServiceRequestRepository;
 import com.neovation.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -120,5 +122,66 @@ public class RequestService {
         }
         String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(userEmail).orElse(null);
+    }
+
+    public ServiceRequest updateRequest(Long id, UpdateRequestDto updateData) {
+        log.info("Attempting to update service request ID: {}", id);
+
+        // Find the existing request or throw an exception
+        ServiceRequest existingRequest = serviceRequestRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Update failed: Service request not found with ID: {}", id);
+                    return new EntityNotFoundException("ServiceRequest not found with id: " + id);
+                });
+
+        // --- Update fields only if they are provided in the DTO ---
+
+        if (updateData.getStatus() != null) {
+            existingRequest.setStatus(updateData.getStatus());
+        }
+        if (updateData.getAdminNotes() != null) {
+            existingRequest.setAdminNotes(updateData.getAdminNotes());
+        }
+        if (updateData.getService() != null) {
+            existingRequest.setService(updateData.getService());
+        }
+        if (updateData.getDescription() != null) {
+            existingRequest.setDescription(updateData.getDescription());
+        }
+        if (updateData.getBudgetRange() != null) {
+            existingRequest.setBudgetRange(updateData.getBudgetRange());
+        }
+        if (updateData.getExpectedDueDate() != null) {
+            existingRequest.setExpectedDueDate(updateData.getExpectedDueDate());
+        }
+
+        // Note: You may need to add logic here to update countryCode if it's tied to the user, not the request.
+        // If it's on the request, you'd find and set the Country entity.
+
+        // Handle new file attachments
+        if (updateData.getAttachments() != null && !updateData.getAttachments().isEmpty()) {
+            log.info("Processing {} new attachments for request ID: {}", updateData.getAttachments().size(), id);
+
+            // Initialize attachments list if it's null
+            if (existingRequest.getAttachments() == null) {
+                existingRequest.setAttachments(new ArrayList<>());
+            }
+
+            for (MultipartFile file : updateData.getAttachments()) {
+                String fileName = fileStorageService.storeFile(file, existingRequest.getUserId());
+                FileAttachment attachment = new FileAttachment();
+                attachment.setFileName(fileName);
+                attachment.setFileSize(file.getSize());
+                attachment.setFileType(file.getContentType());
+                attachment.setUrl("/uploads/" + fileName); // Adjust URL as needed
+                existingRequest.getAttachments().add(attachment);
+            }
+            log.info("Added {} new files to service request {}", updateData.getAttachments().size(), id);
+        }
+
+        // Save and return the updated request
+        ServiceRequest updatedRequest = serviceRequestRepository.save(existingRequest);
+        log.info("Successfully updated service request ID: {}", id);
+        return updatedRequest;
     }
 }

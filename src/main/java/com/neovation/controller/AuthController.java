@@ -16,6 +16,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @CrossOrigin
 @Controller
 @RequestMapping("/api/auth")
@@ -48,6 +50,14 @@ public class AuthController {
         return "confirmation-success";
     }
 
+    @GetMapping("/reset-password")
+    public String resetPassword(@RequestParam String token) {
+        log.info("Received API request to /reset-password with token: {}", token);
+        userService.confirmEmail(token);
+        log.info("Email confirmation successful for token: {}", token);
+        return "confirmation-success";
+    }
+
     @PostMapping("/login")
     @ResponseBody
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid AuthRequest dto) {
@@ -59,7 +69,8 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     @ResponseBody
-    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email"); // Get email from the JSON body
         log.info("Received API request to /forgot-password for email: {}", email);
         userService.requestPasswordReset(email);
         return ResponseEntity.ok("Password reset email sent.");

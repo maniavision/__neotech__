@@ -1,8 +1,10 @@
 package com.neovation.controller;
 
 import com.neovation.dto.CreateRequestDto;
+import com.neovation.dto.UpdateRequestDto;
 import com.neovation.model.ServiceRequest;
 import com.neovation.service.RequestService;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +46,18 @@ public class RequestController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(request);
+    }
+
+    @PutMapping(value = "/{id}", consumes = "multipart/form-data")
+    public ResponseEntity<ServiceRequest> updateRequest(@PathVariable Long id, @ModelAttribute UpdateRequestDto updateRequestDto) {
+        log.info("Received API request to update service request ID: {}", id);
+        try {
+            ServiceRequest updatedRequest = requestService.updateRequest(id, updateRequestDto);
+            return ResponseEntity.ok(updatedRequest);
+        } catch (EntityNotFoundException e) {
+            log.warn("Service request ID {} not found for update", id);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/{requestId}/payment")
