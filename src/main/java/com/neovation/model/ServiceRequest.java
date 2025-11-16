@@ -2,6 +2,7 @@ package com.neovation.model;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,8 +14,6 @@ public class ServiceRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long userId;
-    private String userName;
-    private String userEmail;
     private String title;
     @Enumerated(EnumType.STRING)
     private ServiceType service;
@@ -23,6 +22,15 @@ public class ServiceRequest {
     @Column(name = "budget_range")
     private String budgetRange;
 
+    @Column(name = "price")
+    private BigDecimal price;
+
+    @OneToMany(mappedBy = "serviceRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Payment> payments;
+
+    @OneToMany(mappedBy = "serviceRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews;
+
     @Column(name = "expected_due_date")
     private LocalDate expectedDueDate;
     @Enumerated(EnumType.STRING)
@@ -30,7 +38,6 @@ public class ServiceRequest {
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(name = "service_request_id")
     private List<FileAttachment> attachments;
-    private String adminNotes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -48,22 +55,6 @@ public class ServiceRequest {
 
     public void setUserId(Long userId) {
         this.userId = userId;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getUserEmail() {
-        return userEmail;
-    }
-
-    public void setUserEmail(String userEmail) {
-        this.userEmail = userEmail;
     }
 
     public String getTitle() {
@@ -106,14 +97,6 @@ public class ServiceRequest {
         this.attachments = attachments;
     }
 
-    public String getAdminNotes() {
-        return adminNotes;
-    }
-
-    public void setAdminNotes(String adminNotes) {
-        this.adminNotes = adminNotes;
-    }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -144,5 +127,29 @@ public class ServiceRequest {
 
     public void setExpectedDueDate(LocalDate expectedDueDate) {
         this.expectedDueDate = expectedDueDate;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public List<Payment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<Payment> payments) {
+        this.payments = payments;
+    }
+
+    public List<Review> getReviews() {
+        return reviews;
+    }
+
+    public void setReviews(List<Review> reviews) {
+        this.reviews = reviews;
     }
 }

@@ -4,6 +4,7 @@ import com.neovation.model.RequestStatus;
 import com.neovation.model.ServiceType;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -11,11 +12,11 @@ public class UpdateRequestDto {
 
     private String title;
     private RequestStatus status;
-    private String adminNotes;
     private ServiceType service;
     private String description;
     private String budgetRange;
     private LocalDate expectedDueDate;
+    private BigDecimal price;
 //    private String countryCode;
     private List<MultipartFile> attachments;
 
@@ -25,14 +26,6 @@ public class UpdateRequestDto {
 
     public void setStatus(RequestStatus status) {
         this.status = status;
-    }
-
-    public String getAdminNotes() {
-        return adminNotes;
-    }
-
-    public void setAdminNotes(String adminNotes) {
-        this.adminNotes = adminNotes;
     }
 
     public ServiceType getService() {
@@ -83,4 +76,11 @@ public class UpdateRequestDto {
         return title;
     }
 
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
 }
