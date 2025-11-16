@@ -73,6 +73,7 @@ public class RequestService {
             log.info("Processing {} attachments for new request", requestData.getAttachments().size());
             List<FileAttachment> attachments = new ArrayList<>();
             for (MultipartFile file : requestData.getAttachments()) {
+                assert user != null;
                 String gcsPath = fileStorageService.storeFile(file, user.getId());
 
                 FileAttachment attachment = new FileAttachment();
@@ -167,12 +168,12 @@ public class RequestService {
             }
 
             for (MultipartFile file : updateData.getAttachments()) {
-                String fileName = fileStorageService.storeFile(file, existingRequest.getUserId());
+                String gcsPath = fileStorageService.storeFile(file, existingRequest.getUserId());
                 FileAttachment attachment = new FileAttachment();
-                attachment.setFileName(fileName);
+                attachment.setFileName(file.getOriginalFilename());
                 attachment.setFileSize(file.getSize());
                 attachment.setFileType(file.getContentType());
-                attachment.setUrl("/uploads/" + fileName); // Adjust URL as needed
+                attachment.setUrl(gcsPath); // Adjust URL as needed
                 existingRequest.getAttachments().add(attachment);
             }
             log.info("Added {} new files to service request {}", updateData.getAttachments().size(), id);
