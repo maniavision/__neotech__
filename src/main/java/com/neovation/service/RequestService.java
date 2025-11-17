@@ -3,15 +3,14 @@ package com.neovation.service;
 import com.neovation.dto.CreateRequestDto;
 import com.neovation.dto.NewUserDto;
 import com.neovation.dto.UpdateRequestDto;
-import com.neovation.model.FileAttachment;
-import com.neovation.model.RequestStatus;
-import com.neovation.model.ServiceRequest;
-import com.neovation.model.User;
+import com.neovation.model.*;
+import com.neovation.repository.FileAttachmentRepository;
 import com.neovation.repository.ServiceRequestRepository;
 import com.neovation.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,12 +27,14 @@ public class RequestService {
     final private UserRepository userRepository;
     final private UserService userService;
     final private FileStorageService fileStorageService;
+    final private FileAttachmentRepository fileAttachmentRepository;
 
-    public RequestService(ServiceRequestRepository serviceRequestRepository, UserRepository userRepository, UserService userService, FileStorageService fileStorageService) {
+    public RequestService(ServiceRequestRepository serviceRequestRepository, UserRepository userRepository, UserService userService, FileStorageService fileStorageService, FileAttachmentRepository fileAttachmentRepository) {
         this.serviceRequestRepository = serviceRequestRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
+        this.fileAttachmentRepository = fileAttachmentRepository;
     }
 
     public ServiceRequest createRequest(CreateRequestDto requestData) {
@@ -58,11 +59,6 @@ public class RequestService {
         ServiceRequest serviceRequest = new ServiceRequest();
         if (user != null) {
             serviceRequest.setUserId(user.getId());
-            serviceRequest.setUserName(user.getFirstName() + " " + user.getLastName());
-            serviceRequest.setUserEmail(user.getEmail());
-        } else {
-            serviceRequest.setUserName(requestData.getFirstName() + " " + requestData.getLastName());
-            serviceRequest.setUserEmail(requestData.getEmail());
         }
         serviceRequest.setTitle(requestData.getTitle());
         serviceRequest.setService(requestData.getService());
@@ -77,6 +73,7 @@ public class RequestService {
             log.info("Processing {} attachments for new request", requestData.getAttachments().size());
             List<FileAttachment> attachments = new ArrayList<>();
             for (MultipartFile file : requestData.getAttachments()) {
+                assert user != null;
                 String gcsPath = fileStorageService.storeFile(file, user.getId());
 
                 FileAttachment attachment = new FileAttachment();
@@ -138,12 +135,12 @@ public class RequestService {
         if (updateData.getTitle() != null) {
             existingRequest.setTitle(updateData.getTitle());
         }
-
+        if (updateData.getPrice() != null) {
+            // You could add validation here, e.g., ensure price is positive
+            existingRequest.setPrice(updateData.getPrice());
+        }
         if (updateData.getStatus() != null) {
             existingRequest.setStatus(updateData.getStatus());
-        }
-        if (updateData.getAdminNotes() != null) {
-            existingRequest.setAdminNotes(updateData.getAdminNotes());
         }
         if (updateData.getService() != null) {
             existingRequest.setService(updateData.getService());
@@ -171,12 +168,12 @@ public class RequestService {
             }
 
             for (MultipartFile file : updateData.getAttachments()) {
-                String fileName = fileStorageService.storeFile(file, existingRequest.getUserId());
+                String gcsPath = fileStorageService.storeFile(file, existingRequest.getUserId());
                 FileAttachment attachment = new FileAttachment();
-                attachment.setFileName(fileName);
+                attachment.setFileName(file.getOriginalFilename());
                 attachment.setFileSize(file.getSize());
                 attachment.setFileType(file.getContentType());
-                attachment.setUrl("/uploads/" + fileName); // Adjust URL as needed
+                attachment.setUrl(gcsPath); // Adjust URL as needed
                 existingRequest.getAttachments().add(attachment);
             }
             log.info("Added {} new files to service request {}", updateData.getAttachments().size(), id);
@@ -186,5 +183,154 @@ public class RequestService {
         ServiceRequest updatedRequest = serviceRequestRepository.save(existingRequest);
         log.info("Successfully updated service request ID: {}", id);
         return updatedRequest;
+    }
+
+    /**
+     * Deletes a service request and all associated files from GCS.
+     * Only the user who created the request or an ADMIN can perform this action.
+     *
+     * @param id The ID of the service request to delete.
+     */
+    public void deleteRequest(Long id) {
+        log.info("Attempting to delete service request ID: {}", id);
+
+        // 1. Get the authenticated user
+        User currentUser = getCurrentUser(null);
+        if (currentUser == null) {
+            log.warn("Delete failed: No authenticated user.");
+            throw new AccessDeniedException("User not authenticated.");
+        }
+
+        // 2. Find the request
+        ServiceRequest request = serviceRequestRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Delete failed: Service request not found with ID: {}", id);
+                    return new EntityNotFoundException("ServiceRequest not found with id: " + id);
+                });
+
+        // 3. Security Check: User must be ADMIN or the owner of the request
+        if (!currentUser.getRole().equals(Role.ADMIN) && !request.getUserId().equals(currentUser.getId())) {
+            log.warn("Access denied: User {} attempting to delete request {} owned by user {}",
+                    currentUser.getId(), request.getId(), request.getUserId());
+            throw new AccessDeniedException("Access denied to delete this resource.");
+        }
+
+        // 4. Get the list of file paths *before* deleting the DB record
+        List<String> pathsToDelete = new ArrayList<>();
+        if (request.getAttachments() != null) {
+            for (FileAttachment attachment : request.getAttachments()) {
+                if (attachment.getUrl() != null && !attachment.getUrl().isEmpty()) {
+                    pathsToDelete.add(attachment.getUrl());
+                }
+            }
+        }
+        log.debug("Found {} file attachments to delete from GCS for request ID: {}", pathsToDelete.size(), id);
+
+        // 5. Delete the request from the database.
+        // Because @OneToMany on attachments is CascadeType.ALL,
+        // this will also delete the FileAttachment entries in the database.
+        serviceRequestRepository.delete(request);
+        log.info("Successfully deleted service request record ID: {}", id);
+
+        // 6. Delete associated files from GCS
+        for (String path : pathsToDelete) {
+            fileStorageService.deleteFile(path);
+        }
+        log.info("Completed GCS file cleanup for request ID: {}", id);
+    }
+
+    /**
+     * Generates a signed download URL for a specific attachment.
+     *
+     * @param attachmentId The ID of the FileAttachment.
+     * @return A temporary, signed URL for downloading the file.
+     */
+    public String getAttachmentDownloadUrl(Long attachmentId) {
+        log.info("Generating download URL for attachment ID: {}", attachmentId);
+
+        // 1. Get the authenticated user
+        User currentUser = getCurrentUser(null);
+        if (currentUser == null) {
+            throw new AccessDeniedException("User not authenticated.");
+        }
+
+        // 2. Find the attachment itself to get the blob path
+        FileAttachment attachment = fileAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new EntityNotFoundException("FileAttachment not found with id: " + attachmentId));
+
+        // 3. Find the parent request using the attachment ID for a security check
+        ServiceRequest request = serviceRequestRepository.findByAttachments_Id(attachmentId)
+                .orElseThrow(() -> new EntityNotFoundException("ServiceRequest not found for attachment id: " + attachmentId));
+
+        // 4. Security Check: User must be ADMIN or the owner of the request
+        if (!currentUser.getRole().equals(Role.ADMIN) && !request.getUserId().equals(currentUser.getId())) {
+            log.warn("Access denied: User {} attempting to download attachment {} from request {}",
+                    currentUser.getId(), attachmentId, request.getId());
+            throw new AccessDeniedException("Access denied to download this file.");
+        }
+
+        // 5. Get blob path (which is stored in the 'url' field)
+        String blobPath = attachment.getUrl();
+        if (blobPath == null || blobPath.isEmpty()) {
+            log.error("Attachment ID {} has a null or empty file path.", attachmentId);
+            throw new RuntimeException("File path is missing for this attachment.");
+        }
+
+        // 6. Generate the signed URL
+        return fileStorageService.generateSignedDownloadUrl(blobPath);
+    }
+
+    /**
+     * Deletes a single file attachment from the database and GCS.
+     *
+     * @param attachmentId The ID of the FileAttachment to delete.
+     */
+    public void deleteAttachment(Long attachmentId) {
+        log.info("Attempting to delete attachment ID: {}", attachmentId);
+
+        // 1. Get the authenticated user
+        User currentUser = getCurrentUser(null);
+        if (currentUser == null) {
+            log.warn("Delete attachment failed: No authenticated user.");
+            throw new AccessDeniedException("User not authenticated.");
+        }
+
+        // 2. Find the attachment by its own ID
+        FileAttachment attachment = fileAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> {
+                    log.warn("Delete failed: FileAttachment not found with ID: {}", attachmentId);
+                    return new EntityNotFoundException("FileAttachment not found with id: " + attachmentId);
+                });
+
+        // 3. Find the parent request for security checks
+        ServiceRequest request = serviceRequestRepository.findByAttachments_Id(attachmentId)
+                .orElseThrow(() -> {
+                    // This case should rarely happen, but it protects against orphaned files
+                    log.error("Data integrity issue: No parent ServiceRequest found for attachment ID: {}", attachmentId);
+                    return new EntityNotFoundException("Parent request not found for attachment.");
+                });
+
+        // 4. Security Check: User must be ADMIN or the owner of the request
+        if (!currentUser.getRole().equals(Role.ADMIN) && !request.getUserId().equals(currentUser.getId())) {
+            log.warn("Access denied: User {} attempting to delete attachment {} from request {}",
+                    currentUser.getId(), attachmentId, request.getId());
+            throw new AccessDeniedException("Access denied to delete this file.");
+        }
+
+        // 5. Get the GCS blob path *before* deleting the DB record
+        String blobPath = attachment.getUrl();
+
+        // 6. Delete the attachment from the database
+        // This removes the row from the file_attachments table.
+        fileAttachmentRepository.delete(attachment);
+        log.info("Successfully deleted attachment record ID: {}", attachmentId);
+
+        // 7. Delete the file from GCS
+        if (blobPath != null && !blobPath.isEmpty()) {
+            fileStorageService.deleteFile(blobPath);
+            log.info("Triggered GCS file deletion for path: {}", blobPath);
+        } else {
+            log.warn("Attachment record {} had no GCS path; nothing to delete from storage.", attachmentId);
+        }
     }
 }

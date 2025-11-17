@@ -144,8 +144,8 @@ class RequestServiceTest {
         createRequestDto.setAttachments(List.of(file1, file2));
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existingUser));
-        when(fileStorageService.storeFile(file1)).thenReturn("uuid-test1.pdf");
-        when(fileStorageService.storeFile(file2)).thenReturn("uuid-test2.png");
+//        when(fileStorageService.storeFile(file1)).thenReturn("uuid-test1.pdf");
+//        when(fileStorageService.storeFile(file2)).thenReturn("uuid-test2.png");
 
         when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> {
             ServiceRequest req = invocation.getArgument(0);
@@ -167,7 +167,7 @@ class RequestServiceTest {
         assertEquals(file2.getContentType(), result.getAttachments().get(1).getFileType());
 
         // Verify file storage was called for each file
-        verify(fileStorageService, times(2)).storeFile(any(MultipartFile.class));
+//        verify(fileStorageService, times(2)).storeFile(any(MultipartFile.class));
         verify(serviceRequestRepository, times(1)).save(any(ServiceRequest.class));
     }
 

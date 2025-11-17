@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -291,6 +292,14 @@ public class UserService {
 //        log.info("Successfully updated profile image for user ID: {}", userId);
 //    }
 
+    public User saveUser(User user) {
+        return this.userRepo.save(user);
+    }
+
+    public Optional<User> findUserById(Long id) {
+        return this.userRepo.findById(id);
+    }
+
     public String updateProfileImage(Long userId, MultipartFile file) {
         log.info("Updating profile image for user ID: {}", userId);
         User user = userRepo.findById(userId)
@@ -301,7 +310,7 @@ public class UserService {
             String folderName = String.valueOf(user.getId());
 
             // The base filename is "profile"
-            String publicUrl = fileStorageService.uploadFile(file, folderName, "profile");
+            String publicUrl = fileStorageService.uploadFile(file, folderName, file.getOriginalFilename());
 
             // Save the new public URL to the user's profile
             user.setProfileImage(publicUrl);
