@@ -69,4 +69,24 @@ public class UserController {
                     return ResponseEntity.notFound().build();
                 });
     }
+
+    /**
+     * Generates a temporary signed URL for the user's profile picture.
+     */
+    @GetMapping("/me/profile-image-url")
+    public ResponseEntity<?> getProfileImageUrl(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body("User not authenticated");
+        }
+        try {
+            String url = userService.getProfileImageUrl(userDetails.getUsername());
+            if (url == null) {
+                return ResponseEntity.ok(Map.of("profileImageUrl", (Object)null));
+            }
+            return ResponseEntity.ok(Map.of("profileImageUrl", url));
+        } catch (Exception e) {
+            log.error("Failed to generate signed URL for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.internalServerError().body("Error generating URL");
+        }
+    }
 }

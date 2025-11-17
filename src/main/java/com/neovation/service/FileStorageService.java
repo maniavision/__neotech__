@@ -102,9 +102,9 @@ public class FileStorageService {
         // 5. Return the public URL
         // This assumes the bucket is public or has "Storage Object Viewer"
         // permission for "allUsers".
-        String publicUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, blobName);
-        log.info("File uploaded successfully to: {}", publicUrl);
-        return publicUrl;
+//        String publicUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, blobName);
+//        log.info("File uploaded successfully to: {}", publicUrl);
+        return blobName;
     }
 
     /**
@@ -159,6 +159,61 @@ public class FileStorageService {
         } catch (Exception e) {
             log.error("Failed to generate signed URL for GCS file: gs://{}/{}", bucketName, blobPath, e);
             throw new RuntimeException("Could not generate download URL.", e);
+        }
+    }
+
+    /**
+     * Deletes a file from GCS using its public URL.
+     * Extracts the blob path from the URL.
+     *
+     * @param publicUrl The full public URL (e.g., "https://storage.googleapis.com/bucket/folder/file.png")
+     */
+    public void deleteFileFromUrl(String publicUrl) {
+        if (publicUrl == null || publicUrl.isEmpty()) {
+            log.warn("Attempted to delete file with null or empty URL.");
+            return;
+        }
+
+        // Construct the expected prefix to remove
+        String publicUrlPrefix = String.format("https://storage.googleapis.com/%s/", bucketName);
+
+        if (publicUrl.startsWith(publicUrlPrefix)) {
+            // Extract the blobPath (e.g., "folder/file.png")
+            String blobPath = publicUrl.substring(publicUrlPrefix.length());
+            log.info("Extracted blob path '{}' from URL for deletion.", blobPath);
+            // Call the existing deleteFile method
+            deleteFile(blobPath);
+        } else {
+            log.warn("Cannot delete file: URL '{}' does not match expected format.", publicUrl);
+        }
+    }
+
+    /**
+     * Generates a temporary, signed URL for a private profile picture.
+     *
+     * @param blobPath The full GCS path (e.g., "123/profile-uuid.png").
+     * @return A signed URL string.
+     */
+    public String generateSignedProfileUrl(String blobPath) {
+        if (blobPath == null || blobPath.isEmpty()) {
+            log.warn("Cannot generate profile URL for empty blobPath.");
+            // Return a default/placeholder image URL if you have one
+            return null;
+        }
+        try {
+            // --- CORRECT: This uses bucketProfileName ---
+            BlobId blobId = BlobId.of(bucketName, blobPath);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
+
+            // Give 1 hour of access for a profile picture URL
+            URL url = storage.signUrl(blobInfo, 1, TimeUnit.HOURS, Storage.SignUrlOption.httpMethod(HttpMethod.GET));
+
+            log.info("Generated signed profile URL for: gs://{}/{}", bucketName, blobPath);
+            log.info("signed url:  " + url.toString());
+            return url.toString();
+        } catch (Exception e) {
+            log.error("Failed to generate signed URL for profile file: gs://{}/{}", bucketName, blobPath, e);
+            throw new RuntimeException("Could not generate profile URL.", e);
         }
     }
 }
