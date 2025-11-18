@@ -2,9 +2,12 @@ package com.neovation.controller;
 
 import com.neovation.repository.UserRepository;
 import com.neovation.model.User;
+import com.neovation.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,16 +19,19 @@ public class AdminController {
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
     final private UserRepository userRepo;
     final private PasswordEncoder passwordEncoder;
+    final private UserService userService;
 
-    public AdminController(UserRepository userRepo, PasswordEncoder passwordEncoder) {
+    public AdminController(UserRepository userRepo, PasswordEncoder passwordEncoder, UserService userService) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
+        this.userService = userService;
     }
 
     @GetMapping("/users")
-    public List<User> getAllUsers() {
-        log.info("Admin fetching all users");
-        return userRepo.findAll();
+    public List<User> getAllUsers(@AuthenticationPrincipal UserDetails userDetails) {
+        log.info("Admin/Manager/Staff {} fetching all other users", userDetails.getUsername());
+        // Use the new service method to get all users *except* the caller
+        return userService.getAllUsersExcept(userDetails.getUsername());
     }
 
     @PutMapping("/users/{id}")

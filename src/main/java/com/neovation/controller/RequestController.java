@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -133,4 +134,31 @@ public class RequestController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Could not delete file."); // HTTP 500
         }
     }
+
+    /**
+     * Endpoint for Admin/Staff/Manager to upload an attachment to any request.
+     */
+    @PostMapping(value = "/{id}/attachments", consumes = "multipart/form-data")
+    public ResponseEntity<?> uploadFileToRequest(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        log.info("Received API request to add attachment to request ID: {}", id);
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("File cannot be empty.");
+        }
+        try {
+            ServiceRequest updatedRequest = requestService.addAttachmentToRequest(id, file);
+            // Return the updated request, or perhaps just the new attachment
+            // Returning the request is consistent with the updateRequest endpoint
+            return ResponseEntity.ok(updatedRequest);
+        } catch (EntityNotFoundException e) {
+            log.warn("Attachment upload failed: Request ID {} not found", id);
+            return ResponseEntity.notFound().build();
+        } catch (AccessDeniedException e) {
+            log.warn("Access denied for uploading attachment to request ID {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("An unexpected error occurred while adding attachment to request ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+        }
+    }
+
 }

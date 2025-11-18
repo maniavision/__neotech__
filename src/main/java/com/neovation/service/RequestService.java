@@ -333,4 +333,57 @@ public class RequestService {
             log.warn("Attachment record {} had no GCS path; nothing to delete from storage.", attachmentId);
         }
     }
+
+    /**
+     * Allows an admin, staff, or manager to add an attachment to any service request.
+     *
+     * @param requestId The ID of the request to update.
+     * @param file      The file to attach.
+     * @return The updated ServiceRequest.
+     */
+    public ServiceRequest addAttachmentToRequest(Long requestId, MultipartFile file) {
+        log.info("Attempting to add attachment to request ID: {}", requestId);
+
+        // 1. Security Check: Verify the current user has the required role
+        User currentUser = getCurrentUser(null);
+        if (currentUser == null) {
+            log.warn("Attachment upload failed: No authenticated user.");
+            throw new AccessDeniedException("User not authenticated.");
+        }
+
+        Role role = currentUser.getRole();
+        if (role != Role.ADMIN && role != Role.STAFF && role != Role.MANAGER) {
+            log.warn("Access Denied: User {} with role {} tried to add attachment to request {}",
+                    currentUser.getEmail(), role, requestId);
+            throw new AccessDeniedException("You do not have permission to perform this action.");
+        }
+
+        // 2. Find the request
+        ServiceRequest existingRequest = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> {
+                    log.warn("Attachment upload failed: Service request not found with ID: {}", requestId);
+                    return new EntityNotFoundException("ServiceRequest not found with id: " + requestId);
+                });
+
+        // 3. Upload the file to GCS
+        // We use the request owner's (user.getId()) folder for consistency
+        String gcsPath = fileStorageService.storeFile(file, existingRequest.getUserId());
+
+        // 4. Create the FileAttachment entity
+        FileAttachment attachment = new FileAttachment();
+        attachment.setFileName(file.getOriginalFilename());
+        attachment.setFileSize(file.getSize());
+        attachment.setFileType(file.getContentType());
+        attachment.setUrl(gcsPath);
+
+        // 5. Add to the request and save
+        if (existingRequest.getAttachments() == null) {
+            existingRequest.setAttachments(new ArrayList<>());
+        }
+        existingRequest.getAttachments().add(attachment);
+        ServiceRequest updatedRequest = serviceRequestRepository.save(existingRequest);
+
+        log.info("Successfully added new attachment by user {} to request ID: {}", currentUser.getEmail(), requestId);
+        return updatedRequest;
+    }
 }

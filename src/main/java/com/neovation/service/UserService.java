@@ -34,6 +34,7 @@ import org.thymeleaf.context.Context;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -351,5 +352,22 @@ public class UserService {
         }
 
         return fileStorageService.generateSignedProfileUrl(blobPath);
+    }
+
+    /**
+     * Gets a list of all users, excluding the user identified by the email.
+     * @param emailToExclude The email of the user to exclude from the list.
+     * @return A list of User objects.
+     */
+    public List<User> getAllUsersExcept(String emailToExclude) {
+        log.debug("Fetching all users, excluding: {}", emailToExclude);
+
+        // Find all users
+        List<User> allUsers = userRepo.findAll();
+
+        // Filter out the user who is making the request
+        return allUsers.stream()
+                .filter(user -> !user.getEmail().equals(emailToExclude))
+                .collect(Collectors.toList());
     }
 }
