@@ -43,11 +43,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Only ADMIN, STAFF, or MANAGER can add attachments to any request
+                        .requestMatchers(HttpMethod.POST, "/api/requests/{id}/attachments").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         // Allow anyone to create a new request
                         .requestMatchers(HttpMethod.POST, "/api/requests").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/requests/**").authenticated()
                         .requestMatchers("/api/countries/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

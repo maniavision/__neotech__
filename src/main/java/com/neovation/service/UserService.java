@@ -34,6 +34,7 @@ import org.thymeleaf.context.Context;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -305,23 +306,68 @@ public class UserService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // 1. Get the old URL *before* changing it
+        String oldProfileUrl = user.getProfileImage();
+
         try {
             // The folder name is the user's ID
             String folderName = String.valueOf(user.getId());
 
-            // The base filename is "profile"
+            // 2. Upload the new file and get its public URL
             String publicUrl = fileStorageService.uploadFile(file, folderName, file.getOriginalFilename());
 
-            // Save the new public URL to the user's profile
+            // 3. Save the new public URL to the user's profile
             user.setProfileImage(publicUrl);
             userRepo.save(user);
             log.info("Successfully updated profile image for user ID: {}. URL: {}", userId, publicUrl);
+
+            // 4. Delete the old file *after* the new one is saved
+            if (oldProfileUrl != null && !oldProfileUrl.isEmpty()) {
+                log.info("Deleting old profile image: {}", oldProfileUrl);
+                // Use the new helper method
+                fileStorageService.deleteFileFromUrl(oldProfileUrl);
+            }
 
             // Return the URL to the controller
             return publicUrl;
         } catch (IOException e) {
             log.error("Failed to upload profile image for user ID: {}", userId, e);
+            // If upload fails, the old URL is not deleted and the exception is thrown
             throw new RuntimeException("Could not store file: " + file.getOriginalFilename(), e);
         }
+    }
+
+    /**
+     * Gets a signed URL for the currently authenticated user's profile picture.
+     * @param userEmail The email of the authenticated user.
+     * @return A signed URL, or null if no image is set.
+     */
+    public String getProfileImageUrl(String userEmail) {
+        log.debug("Generating profile image URL for user: {}", userEmail);
+        User user = getUserByEmail(userEmail);
+
+        String blobPath = user.getProfileImage();
+        if (blobPath == null || blobPath.isEmpty()) {
+            return null; // No profile picture set
+        }
+
+        return fileStorageService.generateSignedProfileUrl(blobPath);
+    }
+
+    /**
+     * Gets a list of all users, excluding the user identified by the email.
+     * @param emailToExclude The email of the user to exclude from the list.
+     * @return A list of User objects.
+     */
+    public List<User> getAllUsersExcept(String emailToExclude) {
+        log.debug("Fetching all users, excluding: {}", emailToExclude);
+
+        // Find all users
+        List<User> allUsers = userRepo.findAll();
+
+        // Filter out the user who is making the request
+        return allUsers.stream()
+                .filter(user -> !user.getEmail().equals(emailToExclude))
+                .collect(Collectors.toList());
     }
 }
