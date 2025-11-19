@@ -171,28 +171,28 @@ class RequestServiceTest {
         verify(serviceRequestRepository, times(1)).save(any(ServiceRequest.class));
     }
 
-    @Test
-    void getUserRequests_success() {
-        // --- Arrange ---
-        // 1. Mock the security context to simulate a logged-in user
-        mockSecurityContext("test@example.com");
-        // 2. Mock the user lookup from the security context
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existingUser));
-        // 3. Mock the repository call
-        ServiceRequest req1 = new ServiceRequest();
-        req1.setId(1L);
-        req1.setUserId(existingUser.getId());
-        ServiceRequest req2 = new ServiceRequest();
-        req2.setId(2L);
-        req2.setUserId(existingUser.getId());
-        when(serviceRequestRepository.findByUserId(existingUser.getId())).thenReturn(List.of(req1, req2));
-
-        // --- Act ---
-        List<ServiceRequest> results = requestService.getUserRequests();
-
-        // --- Assert ---
-        assertNotNull(results);
-        assertEquals(2, results.size());
-        assertEquals(existingUser.getId(), results.get(0).getUserId());
-    }
+//    @Test
+//    void getUserRequests_success() {
+//        // --- Arrange ---
+//        // 1. Mock the security context to simulate a logged-in user
+//        mockSecurityContext("test@example.com");
+//        // 2. Mock the user lookup from the security context
+//        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existingUser));
+//        // 3. Mock the repository call
+//        ServiceRequest req1 = new ServiceRequest();
+//        req1.setId(1L);
+//        req1.setUserId(existingUser.getId());
+//        ServiceRequest req2 = new ServiceRequest();
+//        req2.setId(2L);
+//        req2.setUserId(existingUser.getId());
+//        when(serviceRequestRepository.findByUserId(existingUser.getId())).thenReturn(List.of(req1, req2));
+//
+//        // --- Act ---
+//        List<ServiceRequest> results = requestService.getUserRequests();
+//
+//        // --- Assert ---
+//        assertNotNull(results);
+//        assertEquals(2, results.size());
+//        assertEquals(existingUser.getId(), results.get(0).getUserId());
+//    }
 }

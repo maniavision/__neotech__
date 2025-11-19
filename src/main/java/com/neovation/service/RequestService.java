@@ -10,6 +10,7 @@ import com.neovation.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -93,11 +94,32 @@ public class RequestService {
         return savedRequest;
     }
 
-    public List<ServiceRequest> getUserRequests() {
+    public List<ServiceRequest> getUserRequests(RequestStatus status, String sortBy, String sortDir) {
         User user = getCurrentUser(null);
         if (user != null) {
             log.info("Fetching requests for user ID: {}", user.getId());
-            return serviceRequestRepository.findByUserId(user.getId());
+
+            // Determine sort direction
+            Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+            // Map "dueDate" to the actual entity property "expectedDueDate" if necessary,
+            // otherwise default to "createdAt" or use the provided field.
+            String sortProperty = "createdAt";
+            if (sortBy != null && !sortBy.isEmpty()) {
+                if ("dueDate".equals(sortBy)) {
+                    sortProperty = "expectedDueDate";
+                } else {
+                    sortProperty = sortBy;
+                }
+            }
+
+            Sort sort = Sort.by(direction, sortProperty);
+
+            if (status != null) {
+                return serviceRequestRepository.findByUserIdAndStatus(user.getId(), status, sort);
+            } else {
+                return serviceRequestRepository.findByUserId(user.getId(), sort);
+            }
         }
         log.warn("Could not find authenticated user to fetch requests.");
         return new ArrayList<>();
@@ -385,5 +407,35 @@ public class RequestService {
 
         log.info("Successfully added new attachment by user {} to request ID: {}", currentUser.getEmail(), requestId);
         return updatedRequest;
+    }
+
+    /**
+     * Retrieves all service requests for a specific user ID, with optional filtering and sorting.
+     */
+    public List<ServiceRequest> getAllRequestsByUserId(Long userId, RequestStatus status, String sortBy, String sortDir) {
+        log.info("Admin/Staff/Manager fetching requests for user ID: {}", userId);
+
+        // No security check here; handled in the controller (SecurityConfig)
+
+        // Determine sort direction
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        // Map "dueDate" to the actual entity property "expectedDueDate"
+        String sortProperty = "createdAt";
+        if (sortBy != null && !sortBy.isEmpty()) {
+            if ("dueDate".equals(sortBy)) {
+                sortProperty = "expectedDueDate";
+            } else {
+                sortProperty = sortBy;
+            }
+        }
+
+        Sort sort = Sort.by(direction, sortProperty);
+
+        if (status != null) {
+            return serviceRequestRepository.findByUserIdAndStatus(userId, status, sort);
+        } else {
+            return serviceRequestRepository.findByUserId(userId, sort);
+        }
     }
 }

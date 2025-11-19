@@ -89,4 +89,27 @@ public class UserController {
             return ResponseEntity.internalServerError().body("Error generating URL");
         }
     }
+
+    /**
+     * Generates a temporary signed URL for a specific user's profile picture by ID.
+     */
+    @GetMapping("/{id}/profile-image-url")
+    public ResponseEntity<?> getProfileImageUrlById(@PathVariable Long id) {
+        log.info("Received API request for profile image URL for user ID: {}", id);
+        try {
+            String url = userService.getProfileImageUrl(id); // Uses the new ID-based service method
+            if (url == null) {
+                // Return null in the map if no image is set
+                return ResponseEntity.ok(Map.of("profileImageUrl", (Object)null));
+            }
+            return ResponseEntity.ok(Map.of("profileImageUrl", url));
+        } catch (RuntimeException e) {
+            if (e.getMessage().equals("User not found")) {
+                log.warn("User ID {} not found", id);
+                return ResponseEntity.notFound().build(); // HTTP 404
+            }
+            log.error("Failed to generate signed URL for user ID: {}", id, e);
+            return ResponseEntity.internalServerError().body("Error generating URL"); // HTTP 500
+        }
+    }
 }

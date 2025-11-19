@@ -355,19 +355,54 @@ public class UserService {
     }
 
     /**
-     * Gets a list of all users, excluding the user identified by the email.
-     * @param emailToExclude The email of the user to exclude from the list.
-     * @return A list of User objects.
+     * Gets a list of all users, excluding the user identified by the email,
+     * with optional filtering by name or email.
+     * @param emailToExclude The email of the user to exclude from the list (the caller).
+     * @param query Optional search term for first name, last name, or email.
+     * @return A filtered list of User objects.
      */
-    public List<User> getAllUsersExcept(String emailToExclude) {
-        log.debug("Fetching all users, excluding: {}", emailToExclude);
+    public List<User> getAllUsersExcept(String emailToExclude, String query) {
+        List<User> results;
 
-        // Find all users
-        List<User> allUsers = userRepo.findAll();
+        if (query != null && !query.trim().isEmpty()) {
+            log.debug("Fetching users matching query: {} excluding: {}", query, emailToExclude);
 
-        // Filter out the user who is making the request
-        return allUsers.stream()
+            // Search by query in firstName OR lastName OR email
+            // We pass the same query string three times to match the repository method signature
+            results = userRepo.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                    query, query, query);
+        } else {
+            log.debug("Fetching all users, excluding: {}", emailToExclude);
+            // Default to fetching all users if no query provided
+            results = userRepo.findAll();
+        }
+
+        // Always filter out the user who is making the request
+        return results.stream()
                 .filter(user -> !user.getEmail().equals(emailToExclude))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets a signed URL for a specific user's profile picture by ID.
+     * This method can be used by any authenticated user (e.g., ADMIN, STAFF, or another USER)
+     * to view a profile picture, given the user ID.
+     * * @param userId The ID of the user whose profile image is requested.
+     * @return A signed URL, or null if no image is set.
+     */
+    public String getProfileImageUrl(Long userId) {
+        log.debug("Generating profile image URL for user ID: {}", userId);
+
+        // Find user by ID, throws RuntimeException if not found
+        User user = findUserById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found")); // Reuses existing findUserById(Long id)
+
+        String blobPath = user.getProfileImage();
+        if (blobPath == null || blobPath.isEmpty()) {
+            return null; // No profile picture set
+        }
+
+        // Delegate to FileStorageService's existing signed URL generation logic
+        return fileStorageService.generateSignedProfileUrl(blobPath);
     }
 }

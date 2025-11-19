@@ -2,6 +2,8 @@ package com.neovation.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 public class    User {
@@ -38,6 +40,9 @@ public class    User {
     @ManyToOne
     @JoinColumn(name = "country_code")
     private Country country;
+
+    @Column(name = "created_at", updatable = false) // <-- NEW FIELD AND ANNOTATION
+    private LocalDateTime createdAt;
 
     // getters/setters
 
@@ -127,5 +132,13 @@ public class    User {
 
     public void setCountry(Country country) {
         this.country = country;
+    }
+
+    public LocalDateTime getCreatedAt() { // <-- NEW GETTER
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) { // <-- NEW SETTER
+        this.createdAt = createdAt;
     }
 }
