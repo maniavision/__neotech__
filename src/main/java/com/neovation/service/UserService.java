@@ -110,7 +110,7 @@ public class UserService {
         evtRepo.save(evt);
         log.info("Generated and saved email verification token for user {}", user.getId());
 
-        String link = "http://localhost:8080/api/auth/confirm?token=" + token;
+        String link = String.format("%s/api/auth/confirm?token=%s", frontendUrl, token);
         // --- Use MessageSource to get translated text ---
         String title = messageSource.getMessage("email.register.title", null, locale);
         String bodyText = messageSource.getMessage("email.register.body", null, locale);
@@ -219,7 +219,7 @@ public class UserService {
         prt.setExpiryDate(LocalDateTime.now().plusHours(1));
         prtRepo.save(prt);
         log.info("Saved password reset token for user: {}", email);
-        String link = "http://localhost:8080/api/auth/reset-password?token=" + token;
+        String link = String.format("%s/api/auth/reset-password?token=%s", frontendUrl, token);
         // --- Use MessageSource ---
         String title = messageSource.getMessage("email.reset.title", null, locale);
         String bodyText = messageSource.getMessage("email.reset.body", null, locale);
