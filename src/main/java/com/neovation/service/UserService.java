@@ -46,6 +46,9 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
     @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    @Value("${app.backend.url}")
+    private String backendUrl;
     final private UserRepository userRepo;
     final private EmailVerificationTokenRepository evtRepo;
     final private PasswordResetTokenRepository prtRepo;
@@ -110,7 +113,7 @@ public class UserService {
         evtRepo.save(evt);
         log.info("Generated and saved email verification token for user {}", user.getId());
 
-        String link = String.format("%s/api/auth/confirm?token=%s", frontendUrl, token);
+        String link = String.format("%s/api/auth/confirm?token=%s", backendUrl, token);
         // --- Use MessageSource to get translated text ---
         String title = messageSource.getMessage("email.register.title", null, locale);
         String bodyText = messageSource.getMessage("email.register.body", null, locale);
@@ -219,7 +222,7 @@ public class UserService {
         prt.setExpiryDate(LocalDateTime.now().plusHours(1));
         prtRepo.save(prt);
         log.info("Saved password reset token for user: {}", email);
-        String link = String.format("%s/api/auth/reset-password?token=%s", frontendUrl, token);
+        String link = String.format("%s/api/auth/reset-password?token=%s", backendUrl, token);
         // --- Use MessageSource ---
         String title = messageSource.getMessage("email.reset.title", null, locale);
         String bodyText = messageSource.getMessage("email.reset.body", null, locale);
