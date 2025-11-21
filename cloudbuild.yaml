@@ -59,7 +59,6 @@ steps:
       - '--set-secrets=SPRING_MAIL_USERNAME=neovation-mail-user:latest'
       - '--set-secrets=SPRING_MAIL_PASSWORD=neovation-mail-pass:latest'
       - '--set-secrets=JWT_SECRET=neovation-jwt-secret:latest'
-      - '--set-secrets=GOOGLE_APPLICATION_CREDENTIALS=google_app_credentials:latest'
 
       # --- SET ENVIRONMENT-SPECIFIC VARIABLES ---
       # These are configs that change per environment but are not secret.
