@@ -31,6 +31,10 @@ public class ServiceRequest {
     @OneToMany(mappedBy = "serviceRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews;
 
+    @OneToMany(mappedBy = "serviceRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RequestNote> notes;
+
+
     @Column(name = "expected_due_date")
     private LocalDate expectedDueDate;
     @Enumerated(EnumType.STRING)
@@ -151,5 +155,13 @@ public class ServiceRequest {
 
     public void setReviews(List<Review> reviews) {
         this.reviews = reviews;
+    }
+
+    public List<RequestNote> getNotes() {
+        return notes;
+    }
+
+    public void setNotes(List<RequestNote> notes) {
+        this.notes = notes;
     }
 }

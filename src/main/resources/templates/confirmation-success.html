@@ -3,80 +3,185 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Email Confirmed</title>
+    <title>Email Verified</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333333;
-            background-color: #f4f4f7;
+            color: #2E2E2E;
+            background: linear-gradient(135deg, rgba(247, 198, 211, 0.4) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(190, 185, 241, 0.4) 100%);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        .email-wrapper { width: 100%; background-color: #f4f4f7; padding: 40px 20px; }
+        .email-wrapper {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(247, 198, 211, 0.4) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(190, 185, 241, 0.4) 100%);
+            padding: 40px 20px;
+        }
         .container {
             width: 100%;
             max-width: 600px;
             margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
+            background-color: #FFFFFF;
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
         .header {
-            background-color: #ffffff;
-            padding: 32px 40px;
+            background: linear-gradient(135deg, rgba(247, 198, 211, 0.2) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(190, 185, 241, 0.2) 100%);
+            padding: 40px 40px;
             text-align: center;
-            border-bottom: 1px solid #e8e8e8;
+            border-bottom: 1px solid rgba(142, 107, 252, 0.1);
         }
-        /* Use the static path to the logo */
-        .header img { max-width: 160px; height: auto; display: inline-block; }
-        .content { padding: 40px; text-align: center; }
+        .header img {
+            max-width: 180px;
+            height: auto;
+            display: inline-block;
+        }
+        .content {
+            padding: 48px 40px;
+            text-align: center;
+        }
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            background-color: rgba(142, 107, 252, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            color: #8E6BFC;
+        }
         .content h3 {
-            color: #1a1a1a;
-            font-size: 22px;
-            font-weight: 600;
-            margin-bottom: 24px;
+            color: #2E2E2E;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
         }
-        .content p { margin-bottom: 16px; font-size: 15px; color: #4a4a4a; }
-        .button-container { text-align: center; margin: 32px 0; }
+        .content p {
+            margin-bottom: 16px;
+            font-size: 16px;
+            color: #4A5565;
+            line-height: 1.6;
+        }
+        .content p:last-of-type {
+            margin-bottom: 0;
+        }
+        .button-container {
+            text-align: center;
+            margin: 36px 0;
+        }
         .button {
             display: inline-block;
-            background-color: #8A3FFC;
-            color: #ffffff !important;
-            padding: 14px 32px;
+            background-color: #8E6BFC;
+            color: #FFFFFF !important;
+            padding: 14px 48px;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 100px;
             font-weight: 600;
-            font-size: 15px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            border: none;
+            cursor: pointer;
+            pointer-events: auto;
+            line-height: 1.5;
+        }
+        .button:hover {
+            background-color: #7450d4;
+            box-shadow: 0 4px 16px rgba(142, 107, 252, 0.3);
+        }
+        .button:active {
+            opacity: 0.95;
         }
         .footer {
-            background-color: #fafafa;
-            padding: 24px 40px;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 32px 40px;
             text-align: center;
-            border-top: 1px solid #e8e8e8;
-            font-size: 13px;
-            color: #888888;
+            border-top: 1px solid rgba(142, 107, 252, 0.1);
+            font-size: 14px;
+            color: #6B7280;
+        }
+        .footer p {
+            margin: 0;
+        }
+
+        /* Mobile responsiveness */
+        @media only screen and (max-width: 600px) {
+            .email-wrapper {
+                padding: 20px 0;
+            }
+            .container {
+                border-radius: 12px;
+                margin: 0 16px;
+            }
+            .header {
+                padding: 32px 24px;
+            }
+            .header img {
+                max-width: 140px;
+            }
+            .content {
+                padding: 36px 24px;
+            }
+            .content h3 {
+                font-size: 24px;
+                margin-bottom: 14px;
+            }
+            .content p {
+                font-size: 15px;
+            }
+            .button {
+                padding: 12px 40px;
+                font-size: 15px;
+            }
+            .footer {
+                padding: 24px;
+            }
+            .footer p {
+                font-size: 13px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="email-wrapper">
     <div class="container">
+        <!-- Header Section -->
         <div class="header">
             <img src="/images/logo.svg" alt="Neotech" />
         </div>
 
+        <!-- Main Content -->
         <div class="content">
+            <!-- Success Icon -->
+            <div class="success-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+
             <h3>Email Verified Successfully!</h3>
             <p>Your account has been activated. You can now log in with the temporary password sent to your email.</p>
 
             <div class="button-container">
-                <a href="${baseURL}/login" class="button">Go to Login</a>
+                <a th:href="|${baseURL}/login|" class="button" style="display: inline-block; cursor: pointer;">Go to Login</a>
             </div>
         </div>
 
+        <!-- Footer Section -->
         <div class="footer">
             <p>&copy; <span th:text="${#dates.year(#dates.createNow())}">2025</span> Neotech. All rights reserved.</p>
         </div>

@@ -1,6 +1,7 @@
 package com.neovation.controller;
 
 import com.neovation.dto.CreateRequestDto;
+import com.neovation.dto.ServiceRequestDto;
 import com.neovation.dto.UpdateRequestDto;
 import com.neovation.model.RequestStatus;
 import com.neovation.model.ServiceRequest;
@@ -53,9 +54,9 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ServiceRequest> getRequestById(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestDto> getRequestById(@PathVariable Long id) {
         log.info("Received API request to fetch service request ID: {}", id);
-        ServiceRequest request = requestService.getRequestById(id);
+        ServiceRequestDto request = requestService.getRequestById(id);
         if (request == null) {
             log.warn("Service request ID {} not found", id);
             return ResponseEntity.notFound().build();
@@ -176,7 +177,7 @@ public class RequestController {
      * ADMIN/STAFF/MANAGER endpoint to list all service requests for a specific user ID.
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ServiceRequest>> getRequestsByUserId(
+    public ResponseEntity<List<ServiceRequestDto>> getRequestsByUserId(
             @PathVariable Long userId,
             @RequestParam(required = false) RequestStatus status,
             @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
@@ -191,7 +192,7 @@ public class RequestController {
         }
 
         // Fetch requests using the new service method
-        List<ServiceRequest> requests = requestService.getAllRequestsByUserId(userId, status, sortBy, sortDir);
+        List<ServiceRequestDto> requests = requestService.getAllRequestsByUserId(userId, status, sortBy, sortDir);
 
         return ResponseEntity.ok(requests);
     }
