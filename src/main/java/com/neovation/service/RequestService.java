@@ -1,9 +1,6 @@
 package com.neovation.service;
 
-import com.neovation.dto.CreateRequestDto;
-import com.neovation.dto.NewUserDto;
-import com.neovation.dto.ServiceRequestDto;
-import com.neovation.dto.UpdateRequestDto;
+import com.neovation.dto.*;
 import com.neovation.model.*;
 import com.neovation.repository.FileAttachmentRepository;
 import com.neovation.repository.ServiceRequestRepository;
@@ -382,8 +379,8 @@ public class RequestService {
      * @param file      The file to attach.
      * @return The updated ServiceRequest.
      */
-    public ServiceRequest addAttachmentToRequest(Long requestId, MultipartFile file) {
-        log.info("Attempting to add attachment to request ID: {}", requestId);
+    public ServiceRequestDto addAttachmentToRequest(Long requestId, MultipartFile file, String purposeStr) {
+        log.info("Attempting to add attachment to request ID: {} with purpose: {}", requestId, purposeStr);
 
         // 1. Security Check: Verify the current user has the required role
         User currentUser = getCurrentUser(null);
@@ -392,8 +389,16 @@ public class RequestService {
             throw new AccessDeniedException("User not authenticated.");
         }
 
+        FilePurpose purpose;
+        try {
+            purpose = FilePurpose.valueOf(purposeStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid file purpose provided: {}", purposeStr);
+            throw new IllegalArgumentException("Invalid file purpose: " + purposeStr + ". Must be one of: " + FilePurpose.values());
+        }
+
         Role role = currentUser.getRole();
-        if (role != Role.ADMIN && role != Role.STAFF && role != Role.MANAGER) {
+        if (role != Role.ADMIN && role != Role.STAFF && role != Role.MANAGER && role != Role.USER) {
             log.warn("Access Denied: User {} with role {} tried to add attachment to request {}",
                     currentUser.getEmail(), role, requestId);
             throw new AccessDeniedException("You do not have permission to perform this action.");
@@ -416,6 +421,7 @@ public class RequestService {
         attachment.setFileSize(file.getSize());
         attachment.setFileType(file.getContentType());
         attachment.setUrl(gcsPath);
+        attachment.setPurpose(purpose);
 
         // 5. Add to the request and save
         if (existingRequest.getAttachments() == null) {
@@ -425,7 +431,7 @@ public class RequestService {
         ServiceRequest updatedRequest = serviceRequestRepository.save(existingRequest);
 
         log.info("Successfully added new attachment by user {} to request ID: {}", currentUser.getEmail(), requestId);
-        return updatedRequest;
+        return mapToDto(updatedRequest);
     }
 
     /**
@@ -477,10 +483,25 @@ public class RequestService {
 
         // Set attachment count (handles lazy loading check)
         if (request.getAttachments() != null) {
-            dto.setAttachmentCount(request.getAttachments().size());
+            dto.setAttachments(
+                    request.getAttachments().stream()
+                            .map(this::mapToFileAttachmentDto) // <--- MODIFIED
+                            .collect(Collectors.toList())
+            );
         } else {
-            dto.setAttachmentCount(0);
+            dto.setAttachments(new ArrayList<>());
         }
+        return dto;
+    }
+
+    private FileAttachmentDto mapToFileAttachmentDto(FileAttachment attachment) {
+        FileAttachmentDto dto = new FileAttachmentDto();
+        dto.setId(attachment.getId());
+        dto.setFileName(attachment.getFileName());
+        dto.setFileSize(attachment.getFileSize());
+        dto.setFileType(attachment.getFileType());
+        dto.setUrl(attachment.getUrl());
+        dto.setPurpose(attachment.getPurpose());
         return dto;
     }
 }

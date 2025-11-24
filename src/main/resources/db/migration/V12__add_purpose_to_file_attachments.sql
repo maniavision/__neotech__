@@ -1,0 +1,2 @@
+ALTER TABLE file_attachments
+    ADD COLUMN purpose VARCHAR(50) NOT NULL DEFAULT 'USER_FILE';

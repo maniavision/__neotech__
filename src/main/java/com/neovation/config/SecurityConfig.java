@@ -51,7 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/requests/{requestId}/notes/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
 //                        .requestMatchers(HttpMethod.GET, "/api/requests/user/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         // Only ADMIN, STAFF, or MANAGER can add attachments to any request
-                        .requestMatchers(HttpMethod.POST, "/api/requests/{id}/attachments").hasAnyRole("ADMIN", "STAFF", "MANAGER")
+//                        .requestMatchers(HttpMethod.POST, "/api/requests/{id}/attachments").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         // Allow anyone to create a new request
                         .requestMatchers(HttpMethod.POST, "/api/requests").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/requests/**").authenticated()

@@ -6,6 +6,7 @@ import com.neovation.model.ServiceType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class ServiceRequestDto {
     private Long id;
@@ -19,7 +20,7 @@ public class ServiceRequestDto {
     private LocalDate expectedDueDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private int attachmentCount;
+    private List<FileAttachmentDto> attachments;
 
     public ServiceRequestDto() {}
 
@@ -113,11 +114,11 @@ public class ServiceRequestDto {
         this.updatedAt = updatedAt;
     }
 
-    public int getAttachmentCount() {
-        return attachmentCount;
+    public List<FileAttachmentDto> getAttachments() {
+        return attachments;
     }
 
-    public void setAttachmentCount(int attachmentCount) {
-        this.attachmentCount = attachmentCount;
+    public void setAttachments(List<FileAttachmentDto> attachments) {
+        this.attachments = attachments;
     }
 }
