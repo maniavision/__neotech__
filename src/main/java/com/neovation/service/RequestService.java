@@ -2,6 +2,7 @@ package com.neovation.service;
 
 import com.neovation.dto.CreateRequestDto;
 import com.neovation.dto.NewUserDto;
+import com.neovation.dto.ServiceRequestDto;
 import com.neovation.dto.UpdateRequestDto;
 import com.neovation.model.*;
 import com.neovation.repository.FileAttachmentRepository;
@@ -10,6 +11,7 @@ import com.neovation.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class RequestService {
@@ -93,19 +96,57 @@ public class RequestService {
         return savedRequest;
     }
 
-    public List<ServiceRequest> getUserRequests() {
+    public List<ServiceRequest> getUserRequests(RequestStatus status, String sortBy, String sortDir) {
         User user = getCurrentUser(null);
         if (user != null) {
             log.info("Fetching requests for user ID: {}", user.getId());
-            return serviceRequestRepository.findByUserId(user.getId());
+
+            // Determine sort direction
+            Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+            // Map "dueDate" to the actual entity property "expectedDueDate" if necessary,
+            // otherwise default to "createdAt" or use the provided field.
+            String sortProperty = "createdAt";
+            if (sortBy != null && !sortBy.isEmpty()) {
+                if ("dueDate".equals(sortBy)) {
+                    sortProperty = "expectedDueDate";
+                } else {
+                    sortProperty = sortBy;
+                }
+            }
+
+            Sort sort = Sort.by(direction, sortProperty);
+
+            if (status != null) {
+                return serviceRequestRepository.findByUserIdAndStatus(user.getId(), status, sort);
+            } else {
+                return serviceRequestRepository.findByUserId(user.getId(), sort);
+            }
         }
         log.warn("Could not find authenticated user to fetch requests.");
         return new ArrayList<>();
     }
 
-    public ServiceRequest getRequestById(Long id) {
+    public ServiceRequestDto getRequestById(Long id) {
         log.info("Fetching request by ID: {}", id);
-        return serviceRequestRepository.findById(id).orElse(null);
+
+        ServiceRequest request = serviceRequestRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("ServiceRequest not found with id: " + id));
+
+        User currentUser = getCurrentUser(null);
+
+        // Security Check: Must be ADMIN/STAFF/MANAGER or the owner
+        if (currentUser == null || (
+                !currentUser.getRole().equals(Role.ADMIN) &&
+                        !currentUser.getRole().equals(Role.STAFF) &&
+                        !currentUser.getRole().equals(Role.MANAGER) &&
+                        !request.getUserId().equals(currentUser.getId()))) {
+            log.warn("Access denied: User {} attempting to view request {} owned by user {}",
+                    currentUser != null ? currentUser.getId() : "null", request.getId(), request.getUserId());
+            throw new AccessDeniedException("Access denied to view this resource.");
+        }
+
+        return mapToDto(request);
     }
 
     public String makePayment(String requestId) {
@@ -385,5 +426,61 @@ public class RequestService {
 
         log.info("Successfully added new attachment by user {} to request ID: {}", currentUser.getEmail(), requestId);
         return updatedRequest;
+    }
+
+    /**
+     * Retrieves all service requests for a specific user ID, with optional filtering and sorting.
+     */
+    public List<ServiceRequestDto> getAllRequestsByUserId(Long userId, RequestStatus status, String sortBy, String sortDir) {
+        log.info("Admin/Staff/Manager fetching requests for user ID: {}", userId);
+
+        // No security check here; handled in the controller (SecurityConfig)
+        List<ServiceRequest> requests = new ArrayList<>();
+        // Determine sort direction
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        // Map "dueDate" to the actual entity property "expectedDueDate"
+        String sortProperty = "createdAt";
+        if (sortBy != null && !sortBy.isEmpty()) {
+            if ("dueDate".equals(sortBy)) {
+                sortProperty = "expectedDueDate";
+            } else {
+                sortProperty = sortBy;
+            }
+        }
+
+        Sort sort = Sort.by(direction, sortProperty);
+
+        if (status != null) {
+            requests = serviceRequestRepository.findByUserIdAndStatus(userId, status, sort);
+        } else {
+            requests = serviceRequestRepository.findByUserId(userId, sort);
+        }
+        return requests.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+    private ServiceRequestDto mapToDto(ServiceRequest request) {
+        ServiceRequestDto dto = new ServiceRequestDto();
+        dto.setId(request.getId());
+        dto.setUserId(request.getUserId());
+        dto.setTitle(request.getTitle());
+        dto.setService(request.getService());
+        dto.setDescription(request.getDescription());
+        dto.setBudgetRange(request.getBudgetRange());
+        dto.setPrice(request.getPrice());
+        dto.setStatus(request.getStatus());
+        dto.setExpectedDueDate(request.getExpectedDueDate());
+        dto.setCreatedAt(request.getCreatedAt());
+        dto.setUpdatedAt(request.getUpdatedAt());
+
+        // Set attachment count (handles lazy loading check)
+        if (request.getAttachments() != null) {
+            dto.setAttachmentCount(request.getAttachments().size());
+        } else {
+            dto.setAttachmentCount(0);
+        }
+        return dto;
     }
 }

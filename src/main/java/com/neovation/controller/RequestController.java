@@ -1,9 +1,12 @@
 package com.neovation.controller;
 
 import com.neovation.dto.CreateRequestDto;
+import com.neovation.dto.ServiceRequestDto;
 import com.neovation.dto.UpdateRequestDto;
+import com.neovation.model.RequestStatus;
 import com.neovation.model.ServiceRequest;
 import com.neovation.service.RequestService;
+import com.neovation.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +25,11 @@ import java.util.Map;
 public class RequestController {
     private static final Logger log = LoggerFactory.getLogger(RequestController.class);
     private final RequestService requestService;
+    private final UserService userService;
 
-    public RequestController(RequestService requestService) {
+    public RequestController(RequestService requestService, UserService userService) {
         this.requestService = requestService;
+        this.userService = userService;
     }
 
     @PostMapping(consumes = "multipart/form-data")
@@ -35,16 +40,23 @@ public class RequestController {
     }
 
     @GetMapping("/my-requests")
-    public ResponseEntity<List<ServiceRequest>> getUserRequests() {
-        log.info("Received API request to fetch user's requests");
-        List<ServiceRequest> requests = requestService.getUserRequests();
+    public ResponseEntity<List<ServiceRequest>> getUserRequests(
+            @RequestParam(required = false) RequestStatus status,
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir) {
+
+        log.info("Received API request to fetch user's requests. Status: {}, SortBy: {}, Dir: {}", status, sortBy, sortDir);
+
+        // Pass parameters to the service
+        List<ServiceRequest> requests = requestService.getUserRequests(status, sortBy, sortDir);
+
         return ResponseEntity.ok(requests);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ServiceRequest> getRequestById(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestDto> getRequestById(@PathVariable Long id) {
         log.info("Received API request to fetch service request ID: {}", id);
-        ServiceRequest request = requestService.getRequestById(id);
+        ServiceRequestDto request = requestService.getRequestById(id);
         if (request == null) {
             log.warn("Service request ID {} not found", id);
             return ResponseEntity.notFound().build();
@@ -159,6 +171,30 @@ public class RequestController {
             log.error("An unexpected error occurred while adding attachment to request ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
         }
+    }
+
+    /**
+     * ADMIN/STAFF/MANAGER endpoint to list all service requests for a specific user ID.
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ServiceRequestDto>> getRequestsByUserId(
+            @PathVariable Long userId,
+            @RequestParam(required = false) RequestStatus status,
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir) {
+
+        log.info("Received API request to fetch requests for user ID: {}", userId);
+
+        // Optional: Check if the user ID exists before proceeding
+        if (userService.findUserById(userId).isEmpty()) {
+            log.warn("Request to fetch user requests failed: User ID {} not found.", userId);
+            return ResponseEntity.notFound().build(); // HTTP 404
+        }
+
+        // Fetch requests using the new service method
+        List<ServiceRequestDto> requests = requestService.getAllRequestsByUserId(userId, status, sortBy, sortDir);
+
+        return ResponseEntity.ok(requests);
     }
 
 }

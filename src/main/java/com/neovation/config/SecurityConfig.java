@@ -1,5 +1,6 @@
 package com.neovation.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,6 +23,10 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Value("${app.frontend.url}")
+    String frontendUrl;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -43,6 +48,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/requests/{requestId}/notes/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
+//                        .requestMatchers(HttpMethod.GET, "/api/requests/user/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         // Only ADMIN, STAFF, or MANAGER can add attachments to any request
                         .requestMatchers(HttpMethod.POST, "/api/requests/{id}/attachments").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         // Allow anyone to create a new request
@@ -60,7 +67,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // *** VERY IMPORTANT: Verify this matches your Angular origin ***
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", frontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Ensure GET, OPTIONS
         // *** VERY IMPORTANT: Ensure Authorization is allowed (or use *) ***
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type")); // Example: Explicitly list OR use List.of("*")

@@ -28,10 +28,14 @@ public class AdminController {
     }
 
     @GetMapping("/users")
-    public List<User> getAllUsers(@AuthenticationPrincipal UserDetails userDetails) {
-        log.info("Admin/Manager/Staff {} fetching all other users", userDetails.getUsername());
-        // Use the new service method to get all users *except* the caller
-        return userService.getAllUsersExcept(userDetails.getUsername());
+    public List<User> getAllUsers(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) String query) { // Added optional query parameter
+
+        log.info("Admin/Manager/Staff {} fetching all other users with query: {}", userDetails.getUsername(), query);
+
+        // Pass the query to the updated service method
+        return userService.getAllUsersExcept(userDetails.getUsername(), query);
     }
 
     @PutMapping("/users/{id}")
