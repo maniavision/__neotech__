@@ -22,6 +22,9 @@ public class Payment {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(nullable = false)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
@@ -90,5 +93,13 @@ public class Payment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

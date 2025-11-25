@@ -1,13 +1,12 @@
 package com.neovation.controller;
 
-import com.neovation.dto.CreateRequestDto;
-import com.neovation.dto.ServiceRequestDto;
-import com.neovation.dto.UpdateRequestDto;
+import com.neovation.dto.*;
 import com.neovation.model.RequestStatus;
 import com.neovation.model.ServiceRequest;
 import com.neovation.service.RequestService;
 import com.neovation.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -76,12 +75,25 @@ public class RequestController {
         }
     }
 
-    @PostMapping("/{requestId}/payment")
-    public ResponseEntity<String> makePayment(@PathVariable String requestId) {
-        log.info("Received API request to initiate payment for request ID: {}", requestId);
-        // Mock payment logic
-        String paymentUrl = requestService.makePayment(requestId);
-        return ResponseEntity.ok().body("{\"paymentUrl\": \"" + paymentUrl + "\"}");
+    @PostMapping("/{requestId}/payment") // <--- Uses Path Variable for requestId
+    public ResponseEntity<?> makePayment(@PathVariable Long requestId, @RequestBody @Valid PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
+        log.info("Received API request to initiate payment for request ID: {} with amount: {}", requestId, paymentDto.getAmount());
+        try {
+            // Pass the requestId from path variable and the DTO to the service
+            String paymentUrl = requestService.makePayment(requestId, paymentDto);
+            // Return the URL in a custom DTO
+            return ResponseEntity.ok(new StripeCheckoutResponse(paymentUrl));
+        } catch (EntityNotFoundException e) {
+            log.warn("Payment initiation failed: Request ID {} not found.", requestId);
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Payment initiation failed for request ID {}: {}", requestId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (RuntimeException e) {
+            log.error("An unexpected error occurred during payment for request ID {}: {}", requestId, e.getMessage(), e);
+            // This handles StripeException wrapped by the service
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
+        }
     }
 
     /**

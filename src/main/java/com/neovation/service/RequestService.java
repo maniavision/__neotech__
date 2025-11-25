@@ -3,8 +3,10 @@ package com.neovation.service;
 import com.neovation.dto.*;
 import com.neovation.model.*;
 import com.neovation.repository.FileAttachmentRepository;
+import com.neovation.repository.PaymentRepository;
 import com.neovation.repository.ServiceRequestRepository;
 import com.neovation.repository.UserRepository;
+import com.stripe.exception.StripeException;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,13 +31,17 @@ public class RequestService {
     final private UserService userService;
     final private FileStorageService fileStorageService;
     final private FileAttachmentRepository fileAttachmentRepository;
+    final private StripePaymentService stripePaymentService; // <--- NEW FIELD
+    final private PaymentRepository paymentRepository;
 
-    public RequestService(ServiceRequestRepository serviceRequestRepository, UserRepository userRepository, UserService userService, FileStorageService fileStorageService, FileAttachmentRepository fileAttachmentRepository) {
+    public RequestService(ServiceRequestRepository serviceRequestRepository, UserRepository userRepository, UserService userService, FileStorageService fileStorageService, FileAttachmentRepository fileAttachmentRepository, StripePaymentService stripePaymentService, PaymentRepository paymentRepository) {
         this.serviceRequestRepository = serviceRequestRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
         this.fileAttachmentRepository = fileAttachmentRepository;
+        this.stripePaymentService = stripePaymentService;
+        this.paymentRepository = paymentRepository;
     }
 
     public ServiceRequest createRequest(CreateRequestDto requestData) {
@@ -146,9 +153,55 @@ public class RequestService {
         return mapToDto(request);
     }
 
-    public String makePayment(String requestId) {
-        log.info("Generating mock payment link for request ID: {}", requestId);
-        return "https://example.com/payment/" + requestId;
+    /**
+     * Replaced mock payment logic with Stripe integration.
+     * @param requestId The ID of the Service Request
+     * @param paymentDto The DTO containing the requested amount and email
+     */
+    public String makePayment(Long requestId, PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
+        log.info("Generating Stripe payment link for request ID: {} with requested amount: {}", requestId, paymentDto.getAmount());
+
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("ServiceRequest not found with id: " + requestId));
+
+        BigDecimal requestedAmount = paymentDto.getAmount();
+        BigDecimal requiredPrice = request.getPrice();
+
+        if (requiredPrice == null || requiredPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            log.error("Payment failed: Required price is missing or zero for request ID: {}", requestId);
+            throw new IllegalArgumentException("Cannot create payment session. Service price is not set.");
+        }
+
+        // 1. Determine Payment Status based on requested amount vs. required price
+        PaymentStatus initialStatus;
+        if (requestedAmount.compareTo(requiredPrice) < 0) {
+            initialStatus = PaymentStatus.PARTIAL; // requested amount < price
+        } else {
+            // requested amount >= price. Setting to COMPLETED, acknowledging this may be temporary until Stripe webhook confirms success.
+            initialStatus = PaymentStatus.COMPLETED;
+        }
+
+        // 2. Create a new Payment record
+        Payment payment = new Payment();
+        payment.setServiceRequest(request);
+        payment.setAmount(requestedAmount); // Store the amount the customer intends to pay
+        payment.setEmail(paymentDto.getEmail()); // <--- NEW FIELD SET
+        payment.setPaymentStatus(initialStatus); // <--- STATUS SET BASED ON BUSINESS LOGIC
+        payment.setPaymentProvider("Stripe");
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        log.info("Created payment record ID {} for request ID {} with status {}", savedPayment.getId(), requestId, initialStatus);
+
+        try {
+            // 3. Create the Stripe Checkout Session
+            return stripePaymentService.createCheckoutSession(request.getId(), savedPayment.getId());
+        } catch (StripeException e) {
+            log.error("Stripe API error while creating checkout session for request ID {}: {}", requestId, e.getMessage());
+            // Delete the local payment record if Stripe session creation fails.
+            paymentRepository.delete(savedPayment);
+            throw new RuntimeException("Payment processing failed due to an external error.", e);
+        }
     }
 
     private User getCurrentUser(String email) {
