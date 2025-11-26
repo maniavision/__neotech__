@@ -97,6 +97,14 @@ public class RequestService {
         }
         ServiceRequest savedRequest = serviceRequestRepository.save(serviceRequest);
         log.info("Successfully created and saved new service request with ID: {}", savedRequest.getId());
+
+        // Send a confirmation email to the user <--- ADDED LOGIC
+        if (user != null) {
+            userService.sendRequestCreatedEmail(savedRequest);
+        }
+
+        // Send internal alert email to the company/admin <--- ADDED LOGIC
+        userService.sendNewRequestAlertEmail(savedRequest);
         return savedRequest;
     }
 
@@ -484,6 +492,12 @@ public class RequestService {
         ServiceRequest updatedRequest = serviceRequestRepository.save(existingRequest);
 
         log.info("Successfully added new attachment by user {} to request ID: {}", currentUser.getEmail(), requestId);
+
+        // 6. Check if a proposal was uploaded and send email <--- ADDED LOGIC
+        if (purpose == FilePurpose.PROPOSAL) {
+            userService.sendProposalUploadedEmail(updatedRequest);
+        }
+
         return mapToDto(updatedRequest);
     }
 
