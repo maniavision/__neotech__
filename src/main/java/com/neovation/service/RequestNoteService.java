@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,7 +39,7 @@ public class RequestNoteService {
                 .orElseThrow(() -> new AccessDeniedException("User not found or not authenticated."));
     }
 
-    private ServiceRequest findServiceRequest(Long requestId) {
+    private ServiceRequest findServiceRequest(String requestId) {
         return requestRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("ServiceRequest not found with id: " + requestId));
     }
@@ -56,7 +57,7 @@ public class RequestNoteService {
     /**
      * POST /api/requests/{requestId}/notes - Create a note
      */
-    public RequestNoteDto createNote(Long requestId, RequestNoteDto dto) { // <-- CHANGED RETURN TYPE
+    public RequestNoteDto createNote(String requestId, RequestNoteDto dto) { // <-- CHANGED RETURN TYPE
         User currentUser = getCurrentUser();
 
         // Security Check: Only ADMIN, STAFF, MANAGER can create notes
@@ -81,7 +82,7 @@ public class RequestNoteService {
     /**
      * GET /api/requests/{requestId}/notes - Get all notes for a request
      */
-    public List<RequestNoteDto> getAllNotesByRequestId(Long requestId) { // <-- CHANGED RETURN TYPE
+    public List<RequestNoteDto> getAllNotesByRequestId(String requestId) { // <-- CHANGED RETURN TYPE
         User currentUser = getCurrentUser();
 
         // Security Check: Only ADMIN, STAFF, MANAGER can view all notes
@@ -102,7 +103,7 @@ public class RequestNoteService {
     /**
      * PUT /api/requests/{requestId}/notes/{id} - Update a note
      */
-    public RequestNoteDto updateNote(Long requestId, Long noteId, RequestNoteDto dto) { // <-- CHANGED RETURN TYPE
+    public RequestNoteDto updateNote(String requestId, Long noteId, RequestNoteDto dto) { // <-- CHANGED RETURN TYPE
         User currentUser = getCurrentUser();
         findServiceRequest(requestId);
 
@@ -128,7 +129,7 @@ public class RequestNoteService {
     /**
      * DELETE /api/requests/{requestId}/notes/{id} - Delete a note
      */
-    public void deleteNote(Long requestId, Long noteId) {
+    public void deleteNote(String requestId, Long noteId) {
         User currentUser = getCurrentUser();
         ServiceRequest request = findServiceRequest(requestId);
 

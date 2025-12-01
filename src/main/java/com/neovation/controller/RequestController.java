@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @CrossOrigin
 @RestController
@@ -53,7 +54,7 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ServiceRequestDto> getRequestById(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestDto> getRequestById(@PathVariable String id) {
         log.info("Received API request to fetch service request ID: {}", id);
         ServiceRequestDto request = requestService.getRequestById(id);
         if (request == null) {
@@ -64,10 +65,10 @@ public class RequestController {
     }
 
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
-    public ResponseEntity<ServiceRequest> updateRequest(@PathVariable Long id, @ModelAttribute UpdateRequestDto updateRequestDto) {
+    public ResponseEntity<ServiceRequestDto> updateRequest(@PathVariable String id, @ModelAttribute UpdateRequestDto updateRequestDto) {
         log.info("Received API request to update service request ID: {}", id);
         try {
-            ServiceRequest updatedRequest = requestService.updateRequest(id, updateRequestDto);
+            ServiceRequestDto updatedRequest = requestService.updateRequest(id, updateRequestDto);
             return ResponseEntity.ok(updatedRequest);
         } catch (EntityNotFoundException e) {
             log.warn("Service request ID {} not found for update", id);
@@ -76,7 +77,7 @@ public class RequestController {
     }
 
     @PostMapping("/{requestId}/payment") // <--- Uses Path Variable for requestId
-    public ResponseEntity<?> makePayment(@PathVariable Long requestId, @RequestBody @Valid PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
+    public ResponseEntity<?> makePayment(@PathVariable String requestId, @RequestBody @Valid PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
         log.info("Received API request to initiate payment for request ID: {} with amount: {}", requestId, paymentDto.getAmount());
         try {
             // Pass the requestId from path variable and the DTO to the service
@@ -100,7 +101,7 @@ public class RequestController {
      * Deletes a service request by its ID.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteRequest(@PathVariable Long id) {
+    public ResponseEntity<?> deleteRequest(@PathVariable String id) {
         log.info("Received API request to delete service request ID: {}", id);
         try {
             requestService.deleteRequest(id);
@@ -163,7 +164,7 @@ public class RequestController {
      * Endpoint for Admin/Staff/Manager to upload an attachment to any request.
      */
     @PostMapping(value = "/{id}/attachments", consumes = "multipart/form-data")
-    public ResponseEntity<?> uploadFileToRequest(@PathVariable Long id, @RequestParam("file") MultipartFile file,
+    public ResponseEntity<?> uploadFileToRequest(@PathVariable String id, @RequestParam("file") MultipartFile file,
                                                  @RequestParam(name = "purpose", required = false, defaultValue = "USER_FILE") String purpose) {
         log.info("Received API request to add attachment to request ID: {} with purpose: {}", id, purpose);
         if (file.isEmpty()) {

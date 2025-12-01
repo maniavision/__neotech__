@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 public class RequestNoteDto {
     private Long id;
-    private Long requestId;
+    private String requestId;
 
     @NotBlank
     @Size(min = 5, message = "Note content must be at least 5 characters long")
@@ -23,8 +23,8 @@ public class RequestNoteDto {
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Long getRequestId() { return requestId; }
-    public void setRequestId(Long requestId) { this.requestId = requestId; }
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
     public String getAuthorName() { return authorName; }

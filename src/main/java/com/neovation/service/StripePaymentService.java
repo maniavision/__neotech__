@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class StripePaymentService {
@@ -57,7 +58,7 @@ public class StripePaymentService {
      * @throws StripeException if the Stripe API call fails.
      * @throws IllegalArgumentException if the request price is missing or zero.
      */
-    public String createCheckoutSession(Long requestId, Long paymentId) throws StripeException {
+    public String createCheckoutSession(String requestId, Long paymentId) throws StripeException {
         log.info("Creating Stripe Checkout Session for payment ID: {}", paymentId);
 
         // Fetch the local Payment record to get the exact amount to charge and email

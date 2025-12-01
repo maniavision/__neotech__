@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -24,8 +25,8 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @Value("${app.frontend.url}")
-    String baseURL;
+    @Value("${app.frontend.url}") // <--- Re-injecting frontendUrl
+    String frontendUrl;
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     final private UserService userService;
@@ -47,18 +48,20 @@ public class AuthController {
     }
 
     @GetMapping("/confirm")
-    public String confirmEmail(@RequestParam String token) {
+    public String confirmEmail(@RequestParam String token, Model model) {
         log.info("Received API request to /confirm with token: {}", token);
         userService.confirmEmail(token);
         log.info("Email confirmation successful for token: {}", token);
+        model.addAttribute("baseURL", frontendUrl);
         return "confirmation-success";
     }
 
     @GetMapping("/reset-password")
-    public String resetPassword(@RequestParam String token) {
+    public String resetPassword(@RequestParam String token, Model model) {
         log.info("Received API request to /reset-password with token: {}", token);
         userService.confirmEmail(token);
         log.info("Email confirmation successful for token: {}", token);
+        model.addAttribute("baseURL", frontendUrl);
         return "confirmation-success";
     }
 

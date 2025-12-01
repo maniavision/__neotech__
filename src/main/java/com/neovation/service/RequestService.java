@@ -88,6 +88,7 @@ public class RequestService {
                 attachment.setFileName(file.getOriginalFilename());
                 attachment.setFileSize(file.getSize());
                 attachment.setFileType(file.getContentType());
+                attachment.setPurpose(FilePurpose.USER_FILE);
                 // Store the GCS path in the URL field
                 attachment.setUrl(gcsPath);
                 attachments.add(attachment);
@@ -139,7 +140,7 @@ public class RequestService {
         return new ArrayList<>();
     }
 
-    public ServiceRequestDto getRequestById(Long id) {
+    public ServiceRequestDto getRequestById(String id) {
         log.info("Fetching request by ID: {}", id);
 
         ServiceRequest request = serviceRequestRepository.findById(id)
@@ -166,7 +167,7 @@ public class RequestService {
      * @param requestId The ID of the Service Request
      * @param paymentDto The DTO containing the requested amount and email
      */
-    public String makePayment(Long requestId, PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
+    public String makePayment(String requestId, PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
         log.info("Generating Stripe payment link for request ID: {} with requested amount: {}", requestId, paymentDto.getAmount());
 
         ServiceRequest request = serviceRequestRepository.findById(requestId)
@@ -220,7 +221,7 @@ public class RequestService {
         return userRepository.findByEmail(userEmail).orElse(null);
     }
 
-    public ServiceRequest updateRequest(Long id, UpdateRequestDto updateData) {
+    public ServiceRequestDto updateRequest(String id, UpdateRequestDto updateData) {
         log.info("Attempting to update service request ID: {}", id);
 
         // Find the existing request or throw an exception
@@ -281,7 +282,7 @@ public class RequestService {
         // Save and return the updated request
         ServiceRequest updatedRequest = serviceRequestRepository.save(existingRequest);
         log.info("Successfully updated service request ID: {}", id);
-        return updatedRequest;
+        return mapToDto(updatedRequest);
     }
 
     /**
@@ -290,7 +291,7 @@ public class RequestService {
      *
      * @param id The ID of the service request to delete.
      */
-    public void deleteRequest(Long id) {
+    public void deleteRequest(String id) {
         log.info("Attempting to delete service request ID: {}", id);
 
         // 1. Get the authenticated user
@@ -440,7 +441,7 @@ public class RequestService {
      * @param file      The file to attach.
      * @return The updated ServiceRequest.
      */
-    public ServiceRequestDto addAttachmentToRequest(Long requestId, MultipartFile file, String purposeStr) {
+    public ServiceRequestDto addAttachmentToRequest(String requestId, MultipartFile file, String purposeStr) {
         log.info("Attempting to add attachment to request ID: {} with purpose: {}", requestId, purposeStr);
 
         // 1. Security Check: Verify the current user has the required role

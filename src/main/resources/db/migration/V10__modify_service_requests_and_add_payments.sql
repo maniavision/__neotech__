@@ -8,11 +8,11 @@ ALTER TABLE service_requests
 -- Payments Table
 CREATE TABLE payments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    service_request_id BIGINT NOT NULL,
+    service_request_id VARCHAR(36) NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     payment_status VARCHAR(50) NOT NULL, -- e.g., PENDING, COMPLETED, FAILED
     payment_provider VARCHAR(100),       -- e.g., STRIPE, PAYPAL
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (service_request_id) REFERENCES service_requests(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

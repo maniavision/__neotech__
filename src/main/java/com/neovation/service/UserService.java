@@ -433,7 +433,7 @@ public class UserService {
         String infoText = messageSource.getMessage("email.request.created.infotext", infoArgs, locale);
 
         // Link to view the request on the frontend
-        String link = String.format("%s/requests/%d", frontendUrl, request.getId());
+        String link = String.format("%s/requests/%s", frontendUrl, request.getId());
 
         Context context = new Context();
         context.setVariable("title", title);
@@ -516,7 +516,7 @@ public class UserService {
         String infoText = messageSource.getMessage("email.internal.new.request.infotext", infoArgs, locale);
 
         // Link to view the request on the frontend (assuming admin panel path)
-        String link = String.format("%s/admin/requests/%d", frontendUrl, request.getId()); // Assuming a path for Admin view
+        String link = String.format("%s/admin/requests/%s", frontendUrl, request.getId()); // Assuming a path for Admin view
 
         Context context = new Context();
         context.setVariable("title", title);

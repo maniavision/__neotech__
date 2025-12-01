@@ -11,11 +11,11 @@ CREATE TABLE countries (
 CREATE TABLE reviews (
      id BIGINT AUTO_INCREMENT PRIMARY KEY,
      user_id BIGINT NOT NULL,
-     service_request_id BIGINT,  -- Optional: links review to a specific completed request
+     service_request_id VARCHAR(36),
      rating INT NOT NULL,
      comment TEXT,
      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
      FOREIGN KEY (service_request_id) REFERENCES service_requests(id) ON DELETE SET NULL,
      CONSTRAINT chk_rating CHECK (rating >= 1 AND rating <= 5)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
