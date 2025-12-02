@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/requests/{requestId}/reviews/**").authenticated()
                         .requestMatchers("/api/requests/{requestId}/notes/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
 //                        .requestMatchers(HttpMethod.GET, "/api/requests/user/**").hasAnyRole("ADMIN", "STAFF", "MANAGER")
                         // Only ADMIN, STAFF, or MANAGER can add attachments to any request
