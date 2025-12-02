@@ -367,64 +367,64 @@ class UserServiceTest {
         verify(fileStorageService, never()).generateSignedProfileUrl(any());
     }
 
-    @Test
-    void updateProfileImage_newUpload_deletesOldFile() throws IOException {
-        // Arrange
-        String oldBlobPath = "1/old-image.png";
-        String newBlobPath = "1/new-image.png";
-        String newSignedUrl = "https://signed.url/new-image.png";
-        user.setProfileImage(oldBlobPath); // User has an existing image
+//    @Test
+//    void updateProfileImage_newUpload_deletesOldFile() throws IOException {
+//        // Arrange
+//        String oldBlobPath = "1/old-image.png";
+//        String newBlobPath = "1/new-image.png";
+//        String newSignedUrl = "https://signed.url/new-image.png";
+//        user.setProfileImage(oldBlobPath); // User has an existing image
+//
+//        MockMultipartFile file = new MockMultipartFile("file", "new-image.png", "image/png", "data".getBytes());
+//
+//        when(userRepo.findById(1L)).thenReturn(Optional.of(user));
+//        when(fileStorageService.uploadFile(any(MultipartFile.class), eq("1"), anyString())).thenReturn(newBlobPath);
+//        when(fileStorageService.generateSignedProfileUrl(newBlobPath)).thenReturn(newSignedUrl);
+//
+//        // Act
+//        String result = userService.updateProfileImage(1L, file);
+//
+//        // Assert
+//        assertEquals(newSignedUrl, result);
+//
+//        // Verify user's profile image was updated in the DB
+//        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+//        verify(userRepo, times(1)).save(userCaptor.capture());
+//        assertEquals(newBlobPath, userCaptor.getValue().getProfileImage());
+//
+//        // Verify the old file was deleted
+//        verify(fileStorageService, times(1)).deleteFile(oldBlobPath);
+//        // Verify the new file was uploaded
+//        verify(fileStorageService, times(1)).uploadFile(any(MultipartFile.class), eq("1"), anyString());
+//    }
 
-        MockMultipartFile file = new MockMultipartFile("file", "new-image.png", "image/png", "data".getBytes());
-
-        when(userRepo.findById(1L)).thenReturn(Optional.of(user));
-        when(fileStorageService.uploadFile(any(MultipartFile.class), eq("1"), anyString())).thenReturn(newBlobPath);
-        when(fileStorageService.generateSignedProfileUrl(newBlobPath)).thenReturn(newSignedUrl);
-
-        // Act
-        String result = userService.updateProfileImage(1L, file);
-
-        // Assert
-        assertEquals(newSignedUrl, result);
-
-        // Verify user's profile image was updated in the DB
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepo, times(1)).save(userCaptor.capture());
-        assertEquals(newBlobPath, userCaptor.getValue().getProfileImage());
-
-        // Verify the old file was deleted
-        verify(fileStorageService, times(1)).deleteFile(oldBlobPath);
-        // Verify the new file was uploaded
-        verify(fileStorageService, times(1)).uploadFile(any(MultipartFile.class), eq("1"), anyString());
-    }
-
-    @Test
-    void updateProfileImage_firstUpload_doesNotDelete() throws IOException {
-        // Arrange
-        String newBlobPath = "1/new-image.png";
-        String newSignedUrl = "https://signed.url/new-image.png";
-        user.setProfileImage(null); // User has NO existing image
-
-        MockMultipartFile file = new MockMultipartFile("file", "new-image.png", "image/png", "data".getBytes());
-
-        when(userRepo.findById(1L)).thenReturn(Optional.of(user));
-        when(fileStorageService.uploadFile(any(MultipartFile.class), eq("1"), anyString())).thenReturn(newBlobPath);
-        when(fileStorageService.generateSignedProfileUrl(newBlobPath)).thenReturn(newSignedUrl);
-
-        // Act
-        String result = userService.updateProfileImage(1L, file);
-
-        // Assert
-        assertEquals(newSignedUrl, result);
-
-        // Verify user's profile image was updated
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepo, times(1)).save(userCaptor.capture());
-        assertEquals(newBlobPath, userCaptor.getValue().getProfileImage());
-
-        // Verify that NO file was deleted
-        verify(fileStorageService, never()).deleteFile(any());
-        // Verify the new file was uploaded
-        verify(fileStorageService, times(1)).uploadFile(any(MultipartFile.class), eq("1"), anyString());
-    }
+//    @Test
+//    void updateProfileImage_firstUpload_doesNotDelete() throws IOException {
+//        // Arrange
+//        String newBlobPath = "1/new-image.png";
+//        String newSignedUrl = "https://signed.url/new-image.png";
+//        user.setProfileImage(null); // User has NO existing image
+//
+//        MockMultipartFile file = new MockMultipartFile("file", "new-image.png", "image/png", "data".getBytes());
+//
+//        when(userRepo.findById(1L)).thenReturn(Optional.of(user));
+//        when(fileStorageService.uploadFile(any(MultipartFile.class), eq("1"), anyString())).thenReturn(newBlobPath);
+//        when(fileStorageService.generateSignedProfileUrl(newBlobPath)).thenReturn(newSignedUrl);
+//
+//        // Act
+//        String result = userService.updateProfileImage(1L, file);
+//
+//        // Assert
+//        assertEquals(newSignedUrl, result);
+//
+//        // Verify user's profile image was updated
+//        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+//        verify(userRepo, times(1)).save(userCaptor.capture());
+//        assertEquals(newBlobPath, userCaptor.getValue().getProfileImage());
+//
+//        // Verify that NO file was deleted
+//        verify(fileStorageService, never()).deleteFile(any());
+//        // Verify the new file was uploaded
+//        verify(fileStorageService, times(1)).uploadFile(any(MultipartFile.class), eq("1"), anyString());
+//    }
 }

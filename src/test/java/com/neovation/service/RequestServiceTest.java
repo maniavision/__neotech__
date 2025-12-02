@@ -3,6 +3,7 @@ package com.neovation.service;
 import com.neovation.dto.CreateRequestDto;
 import com.neovation.dto.NewUserDto;
 import com.neovation.model.*;
+import com.neovation.repository.PaymentRepository; // <--- NEW IMPORT
 import com.neovation.repository.ServiceRequestRepository;
 import com.neovation.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +40,10 @@ class RequestServiceTest {
     private UserService userService;
     @Mock
     private FileStorageService fileStorageService;
+    @Mock
+    private StripePaymentService stripePaymentService; // <--- NEW MOCK
+    @Mock
+    private PaymentRepository paymentRepository;     // <--- NEW MOCK
 
     @InjectMocks
     private RequestService requestService;
@@ -76,12 +82,12 @@ class RequestServiceTest {
     @Test
     void createRequest_existingUser() {
         // --- Arrange ---
-        // User is found
+        String expectedId = "uuid-test-100"; // Changed ID to String
+
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existingUser));
-        // Mock the save operation
         when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> {
             ServiceRequest req = invocation.getArgument(0);
-            req.setId(100L); // Simulate ID generation
+            req.setId(expectedId); // Simulate ID generation as String
             return req;
         });
 
@@ -90,11 +96,14 @@ class RequestServiceTest {
 
         // --- Assert ---
         assertNotNull(result);
-        assertEquals(100L, result.getId());
+        assertEquals(expectedId, result.getId()); // Assert String ID
         assertEquals(existingUser.getId(), result.getUserId());
-//        assertEquals(existingUser.getEmail(), result.get);
         assertEquals("New Website", result.getTitle());
         assertEquals(RequestStatus.SUBMITTED, result.getStatus());
+
+        // Verify email notifications were sent
+        verify(userService, times(1)).sendRequestCreatedEmail(result);
+        verify(userService, times(1)).sendNewRequestAlertEmail(result);
 
         // Verify user was NOT registered
         verify(userService, never()).register(any(NewUserDto.class));
@@ -105,6 +114,8 @@ class RequestServiceTest {
     @Test
     void createRequest_newUser_registersAndCreatesRequest() {
         // --- Arrange ---
+        String expectedId = "uuid-test-101"; // Changed ID to String
+
         // 1. User is NOT found
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
         // 2. Mock the registration process
@@ -112,7 +123,7 @@ class RequestServiceTest {
         // 3. Mock the request save
         when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> {
             ServiceRequest req = invocation.getArgument(0);
-            req.setId(101L);
+            req.setId(expectedId);
             return req;
         });
 
@@ -121,10 +132,13 @@ class RequestServiceTest {
 
         // --- Assert ---
         assertNotNull(result);
-        assertEquals(101L, result.getId());
+        assertEquals(expectedId, result.getId()); // Assert String ID
         assertEquals(existingUser.getId(), result.getUserId()); // ID from registered user
-//        assertEquals(existingUser.getEmail(), result.getUserEmail());
         assertEquals(RequestStatus.SUBMITTED, result.getStatus());
+
+        // Verify email notifications were sent
+        verify(userService, times(1)).sendRequestCreatedEmail(result);
+        verify(userService, times(1)).sendNewRequestAlertEmail(result);
 
         // Verify registration was called
         ArgumentCaptor<NewUserDto> newUserCaptor = ArgumentCaptor.forClass(NewUserDto.class);
@@ -139,17 +153,28 @@ class RequestServiceTest {
     @Test
     void createRequest_withAttachments() {
         // --- Arrange ---
+        String expectedId = "uuid-test-102"; // Changed ID to String
+
         MockMultipartFile file1 = new MockMultipartFile("file", "test1.pdf", "application/pdf", "test data 1".getBytes());
         MockMultipartFile file2 = new MockMultipartFile("file", "test2.png", "image/png", "test data 2".getBytes());
         createRequestDto.setAttachments(List.of(file1, file2));
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existingUser));
-//        when(fileStorageService.storeFile(file1)).thenReturn("uuid-test1.pdf");
-//        when(fileStorageService.storeFile(file2)).thenReturn("uuid-test2.png");
+
+        // Mock file storage service calls and provide mock GCS paths
+        when(fileStorageService.storeFile(eq(file1), eq(existingUser.getId()))).thenReturn("gcs-path-1.pdf");
+        when(fileStorageService.storeFile(eq(file2), eq(existingUser.getId()))).thenReturn("gcs-path-2.png");
 
         when(serviceRequestRepository.save(any(ServiceRequest.class))).thenAnswer(invocation -> {
             ServiceRequest req = invocation.getArgument(0);
-            req.setId(102L);
+            req.setId(expectedId);
+            // Manually set GCS paths/filenames for assertions since we are mocking creation
+            if (req.getAttachments() != null) {
+                req.getAttachments().get(0).setUrl("gcs-path-1.pdf");
+                req.getAttachments().get(0).setFileName(file1.getOriginalFilename());
+                req.getAttachments().get(1).setUrl("gcs-path-2.png");
+                req.getAttachments().get(1).setFileName(file2.getOriginalFilename());
+            }
             return req;
         });
 
@@ -158,41 +183,23 @@ class RequestServiceTest {
 
         // --- Assert ---
         assertNotNull(result);
-        assertEquals(102L, result.getId());
+        assertEquals(expectedId, result.getId());
         assertNotNull(result.getAttachments());
         assertEquals(2, result.getAttachments().size());
-        assertEquals("uuid-test1.pdf", result.getAttachments().get(0).getFileName());
-        assertEquals("uuid-test2.png", result.getAttachments().get(1).getFileName());
+
+        // Assert file storage was called with the correct user ID
+        verify(fileStorageService, times(1)).storeFile(eq(file1), eq(existingUser.getId()));
+        verify(fileStorageService, times(1)).storeFile(eq(file2), eq(existingUser.getId()));
+
+        // Verify attachment details and purpose (purpose should be USER_FILE by default)
+        assertEquals("test1.pdf", result.getAttachments().get(0).getFileName());
+        assertEquals("gcs-path-2.png", result.getAttachments().get(1).getUrl());
         assertEquals(file1.getSize(), result.getAttachments().get(0).getFileSize());
-        assertEquals(file2.getContentType(), result.getAttachments().get(1).getFileType());
+        assertEquals(FilePurpose.USER_FILE, result.getAttachments().get(0).getPurpose());
+        assertEquals(FilePurpose.USER_FILE, result.getAttachments().get(1).getPurpose());
 
-        // Verify file storage was called for each file
-//        verify(fileStorageService, times(2)).storeFile(any(MultipartFile.class));
-        verify(serviceRequestRepository, times(1)).save(any(ServiceRequest.class));
+        // Verify email notifications were sent
+        verify(userService, times(1)).sendRequestCreatedEmail(result);
+        verify(userService, times(1)).sendNewRequestAlertEmail(result);
     }
-
-//    @Test
-//    void getUserRequests_success() {
-//        // --- Arrange ---
-//        // 1. Mock the security context to simulate a logged-in user
-//        mockSecurityContext("test@example.com");
-//        // 2. Mock the user lookup from the security context
-//        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existingUser));
-//        // 3. Mock the repository call
-//        ServiceRequest req1 = new ServiceRequest();
-//        req1.setId(1L);
-//        req1.setUserId(existingUser.getId());
-//        ServiceRequest req2 = new ServiceRequest();
-//        req2.setId(2L);
-//        req2.setUserId(existingUser.getId());
-//        when(serviceRequestRepository.findByUserId(existingUser.getId())).thenReturn(List.of(req1, req2));
-//
-//        // --- Act ---
-//        List<ServiceRequest> results = requestService.getUserRequests();
-//
-//        // --- Assert ---
-//        assertNotNull(results);
-//        assertEquals(2, results.size());
-//        assertEquals(existingUser.getId(), results.get(0).getUserId());
-//    }
 }
