@@ -1,0 +1,2 @@
+ALTER TABLE payments
+    ADD COLUMN session_id VARCHAR(255) UNIQUE;

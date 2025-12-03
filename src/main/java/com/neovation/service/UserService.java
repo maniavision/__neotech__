@@ -530,4 +530,42 @@ public class UserService {
         sendEmail(to, title, htmlBody);
         log.info("Sent internal new request alert for ID {} to {}", request.getId(), to);
     }
+
+    /**
+     * Dedicated method for sending Payment Receipt email.
+     */
+    public void sendPaymentReceiptEmail(Payment payment) {
+        Locale locale = Locale.ENGLISH; // Assuming English for now, locale logic can be expanded
+
+        ServiceRequest request = payment.getServiceRequest();
+        String to = payment.getEmail(); // Use the email saved on the payment record
+
+        if (to == null || request == null) {
+            log.warn("Skipping payment receipt email: Payment or associated Request is incomplete.");
+            return;
+        }
+
+        String title = messageSource.getMessage("email.payment.receipt.title", null, locale);
+        String bodyText = messageSource.getMessage("email.payment.receipt.body", null, locale);
+        String buttonText = messageSource.getMessage("email.payment.receipt.button", null, locale);
+
+        // Arguments: {0} = Request ID, {1} = Amount Paid, {2} = Status
+        Object[] infoArgs = { request.getId(), payment.getAmount().toString(), payment.getPaymentStatus().name() };
+        String infoText = messageSource.getMessage("email.payment.receipt.infotext", infoArgs, locale);
+
+        // Link to view the request on the frontend
+        String link = String.format("%s/requests/%s", frontendUrl, request.getId());
+
+        Context context = new Context();
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("buttonText", buttonText);
+        context.setVariable("infoText", infoText);
+        context.setVariable("linkUrl", link);
+        context.setVariable("baseUrl", frontendUrl);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(to, title, htmlBody);
+        log.info("Sent payment receipt email for Payment ID {} (Request ID {}) to user {}", payment.getId(), request.getId(), to);
+    }
 }
