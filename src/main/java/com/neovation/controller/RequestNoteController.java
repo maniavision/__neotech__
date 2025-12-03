@@ -1,7 +1,6 @@
 package com.neovation.controller;
 
 import com.neovation.dto.RequestNoteDto;
-import com.neovation.model.RequestNote;
 import com.neovation.service.RequestNoteService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -13,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @CrossOrigin
 @RestController
@@ -28,7 +28,7 @@ public class RequestNoteController {
 
     @PostMapping
     public ResponseEntity<RequestNoteDto> createNote(
-            @PathVariable Long requestId,
+            @PathVariable String requestId,
             @RequestBody @Valid RequestNoteDto dto) {
 
         log.info("Received POST to create note for request ID: {}", requestId);
@@ -43,7 +43,7 @@ public class RequestNoteController {
     }
 
     @GetMapping
-    public ResponseEntity<List<RequestNoteDto>> getAllNotes(@PathVariable Long requestId) {
+    public ResponseEntity<List<RequestNoteDto>> getAllNotes(@PathVariable String requestId) {
         log.info("Received GET to fetch all notes for request ID: {}", requestId);
         try {
             List<RequestNoteDto> notes = noteService.getAllNotesByRequestId(requestId);
@@ -57,7 +57,7 @@ public class RequestNoteController {
 
     @PutMapping("/{id}")
     public ResponseEntity<RequestNoteDto> updateNote(
-            @PathVariable Long requestId,
+            @PathVariable String requestId,
             @PathVariable Long id,
             @RequestBody @Valid RequestNoteDto dto) {
 
@@ -74,7 +74,7 @@ public class RequestNoteController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteNote(
-            @PathVariable Long requestId,
+            @PathVariable String requestId,
             @PathVariable Long id) {
 
         log.info("Received DELETE to delete note ID: {} for request ID: {}", id, requestId);

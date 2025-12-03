@@ -66,6 +66,9 @@ steps:
       - '--set-env-vars=SPRING_DATASOURCE_URL=${_DB_URL}'
       - '--set-env-vars=APP_FRONTEND_URL=${_FRONTEND_URL}'
       - '--set-env-vars=APP_BACKEND_URL=${_BACKEND_URL}'
+      - '--set-env-vars=STRIPE_PUBLIC_KEY=${_STRIPE_PUBLIC_KEY}'
+      - '--set-env-vars=STRIPE_SECRET_KEY=${_STRIPE_SECRET_KEY}'
+      - '--set-env-vars=APP_INTERNAL_SUPPORT_EMAIL=${_APP_INTERNAL_SUPPORT_EMAIL}'
 
       # --- CONNECT TO CLOUD SQL (Example) ---
       # This is required if your _DB_URL is a Cloud SQL instance.
@@ -88,6 +91,7 @@ substitutions:
   _DB_URL: 'jdbc:mysql://localhost:3306/neotech?useSSL=false' # Dev default
   _FRONTEND_URL: 'http://localhost:4200' # Dev default
   _CLOUD_SQL_INSTANCE: mineral-trainer-477512-c2:us-east4:neovation-dev
+  _APP_INTERNAL_SUPPORT_EMAIL: neovation101@gmail.com
   #jdbc:mysql://google/neovation?cloudSqlInstance=mineral-trainer-477512-c2:us-east4:neovation-dev
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
 

@@ -1,19 +1,16 @@
-package com.neovation.model;
+package com.neovation.dto;
 
-import jakarta.persistence.*;
+import com.neovation.model.FilePurpose;
 
-@Entity
-@Table(name = "file_attachments")
-public class FileAttachment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class FileAttachmentDto {
     private Long id;
     private String fileName;
-    @Enumerated(EnumType.STRING)
-    private FilePurpose purpose;
     private long fileSize;
     private String fileType;
     private String url;
+    private FilePurpose purpose;
+
+    // Getters and Setters
 
     public Long getId() {
         return id;

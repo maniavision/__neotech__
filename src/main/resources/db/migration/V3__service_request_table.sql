@@ -1,5 +1,5 @@
 CREATE TABLE service_requests (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  id VARCHAR(36) PRIMARY KEY,
   user_id BIGINT,
   user_name VARCHAR(255),
   user_email VARCHAR(255),
@@ -11,7 +11,7 @@ CREATE TABLE service_requests (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci; -- <--- APPLIED CHAR SET
 
 CREATE TABLE file_attachments (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -19,6 +19,6 @@ CREATE TABLE file_attachments (
   file_size BIGINT NOT NULL,
   file_type VARCHAR(255) NOT NULL,
   url VARCHAR(255) NOT NULL,
-  service_request_id BIGINT,
+  service_request_id VARCHAR(36),
   FOREIGN KEY (service_request_id) REFERENCES service_requests(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci; -- <--- APPLIED CHAR SET

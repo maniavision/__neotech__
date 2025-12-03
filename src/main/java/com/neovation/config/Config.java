@@ -24,7 +24,7 @@ public class Config {
         return factory -> factory.addConnectorCustomizers((Connector connector) -> {
             connector.setProperty("maxPartCount", "50");
             connector.setProperty("maxPartHeaderSize", "2048");
-            connector.setProperty("maxPostSize", String.valueOf(50 * 1024 * 1024)); // 50 MB
+            connector.setProperty("maxPostSize", String.valueOf(150 * 1024 * 1024)); // 150 MB
         });
     }
 }

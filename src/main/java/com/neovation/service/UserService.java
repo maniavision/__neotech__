@@ -1,16 +1,13 @@
 package com.neovation.service;
 
 import com.neovation.config.JwtTokenProvider;
-import com.neovation.model.PasswordResetToken;
+import com.neovation.model.*;
 import com.neovation.repository.EmailVerificationTokenRepository;
 import com.neovation.repository.PasswordResetTokenRepository;
 import com.neovation.repository.UserRepository;
 import com.neovation.dto.AuthRequest;
 import com.neovation.dto.NewUserDto;
 import com.neovation.dto.ResetPasswordDto;
-import com.neovation.model.Country;
-import com.neovation.model.EmailVerificationToken;
-import com.neovation.model.User;
 import com.neovation.repository.CountryRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -49,6 +46,10 @@ public class UserService {
 
     @Value("${app.backend.url}")
     private String backendUrl;
+
+    @Value("${app.internal.support-email}") // <--- NEW INJECTION
+    private String internalSupportEmail;
+
     final private UserRepository userRepo;
     final private EmailVerificationTokenRepository evtRepo;
     final private PasswordResetTokenRepository prtRepo;
@@ -264,7 +265,7 @@ public class UserService {
         return this.userRepo.findByEmail(email).orElseThrow();
     }
 
-    private void sendEmail(String to, String subject, String htmlBody) {
+    public void sendEmail(String to, String subject, String htmlBody) {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8"); // true = multipart
@@ -407,5 +408,126 @@ public class UserService {
 
         // Delegate to FileStorageService's existing signed URL generation logic
         return fileStorageService.generateSignedProfileUrl(blobPath);
+    }
+
+    /**
+     * Dedicated method for sending New Request Confirmation email.
+     */
+    public void sendRequestCreatedEmail(ServiceRequest request) {
+        Locale locale = Locale.ENGLISH; // Assuming English for now
+        String to = request.getUserId() != null ?
+                userRepo.findById(request.getUserId()).map(User::getEmail).orElse(null) :
+                null;
+
+        if (to == null) {
+            log.warn("Skipping request created email: User ID {} not found or is null.", request.getUserId());
+            return;
+        }
+
+        String title = messageSource.getMessage("email.request.created.title", null, locale);
+        String bodyText = messageSource.getMessage("email.request.created.body", null, locale);
+        String buttonText = messageSource.getMessage("email.request.created.button", null, locale);
+
+        // Arguments: {0} = Request ID, {1} = Title, {2} = Service Type
+        Object[] infoArgs = { request.getId(), request.getTitle(), request.getService().name() };
+        String infoText = messageSource.getMessage("email.request.created.infotext", infoArgs, locale);
+
+        // Link to view the request on the frontend
+        String link = String.format("%s/requests/%s", frontendUrl, request.getId());
+
+        Context context = new Context();
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("buttonText", buttonText);
+        context.setVariable("infoText", infoText);
+        context.setVariable("linkUrl", link);
+        context.setVariable("baseUrl", frontendUrl);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(to, title, htmlBody);
+        log.info("Sent new request email for ID {} to user {}", request.getId(), to);
+    }
+
+    /**
+     * Dedicated method for sending Proposal Uploaded email.
+     */
+    public void sendProposalUploadedEmail(ServiceRequest request) {
+        Locale locale = Locale.ENGLISH; // Assuming English for now
+        String to = request.getUserId() != null ?
+                userRepo.findById(request.getUserId()).map(User::getEmail).orElse(null) :
+                null;
+
+        if (to == null) {
+            log.warn("Skipping proposal uploaded email: User ID {} not found or is null.", request.getUserId());
+            return;
+        }
+
+        String title = messageSource.getMessage("email.proposal.uploaded.title", null, locale);
+        String bodyText = messageSource.getMessage("email.proposal.uploaded.body", null, locale);
+        String buttonText = messageSource.getMessage("email.proposal.uploaded.button", null, locale);
+
+        // Arguments: {0} = Request ID, {1} = Title
+        Object[] infoArgs = { request.getId(), request.getTitle() };
+        String infoText = messageSource.getMessage("email.proposal.uploaded.infotext", infoArgs, locale);
+
+        // Link to view the request/proposal on the frontend
+        String link = String.format("%s/requests/%d", frontendUrl, request.getId());
+
+        Context context = new Context();
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("buttonText", buttonText);
+        context.setVariable("infoText", infoText);
+        context.setVariable("linkUrl", link);
+        context.setVariable("baseUrl", frontendUrl);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(to, title, htmlBody);
+        log.info("Sent proposal uploaded email for ID {} to user {}", request.getId(), to);
+    }
+
+    /**
+     * Dedicated method for sending Company Alert Email about a new request.
+     */
+    public void sendNewRequestAlertEmail(ServiceRequest request) {
+        Locale locale = Locale.ENGLISH;
+        String to = internalSupportEmail;
+
+        if (to == null || to.isBlank()) {
+            log.warn("Skipping internal new request alert email: internal support email is not configured.");
+            return;
+        }
+
+        // Determine who submitted the request (Guest or Registered User)
+        String submittedByName = "Guest";
+        if (request.getUserId() != null) {
+            submittedByName = userRepo.findById(request.getUserId())
+                    .map(u -> u.getFirstName() + " " + u.getLastName() + " (" + u.getEmail() + ")")
+                    .orElse("Unknown Registered User");
+        }
+
+
+        String title = messageSource.getMessage("email.internal.new.request.title", new Object[]{request.getTitle()}, locale);
+        String bodyText = messageSource.getMessage("email.internal.new.request.body", null, locale);
+        String buttonText = messageSource.getMessage("email.internal.new.request.button", null, locale);
+
+        // Arguments: {1} = Request ID, {2} = Service Type, {3} = Submitted By
+        Object[] infoArgs = { request.getId(), request.getService().name(), submittedByName };
+        String infoText = messageSource.getMessage("email.internal.new.request.infotext", infoArgs, locale);
+
+        // Link to view the request on the frontend (assuming admin panel path)
+        String link = String.format("%s/admin/requests/%s", frontendUrl, request.getId()); // Assuming a path for Admin view
+
+        Context context = new Context();
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("buttonText", buttonText);
+        context.setVariable("infoText", infoText);
+        context.setVariable("linkUrl", link);
+        context.setVariable("baseUrl", frontendUrl);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(to, title, htmlBody);
+        log.info("Sent internal new request alert for ID {} to {}", request.getId(), to);
     }
 }

@@ -1,18 +1,22 @@
 package com.neovation.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "service_requests")
 public class ServiceRequest {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator // <--- MODERN HIBERNATE ANNOTATION
+    @Column(columnDefinition = "CHAR(36)")
+    private String id; // Type remains String
     private Long userId;
     private String title;
     @Enumerated(EnumType.STRING)
@@ -45,11 +49,11 @@ public class ServiceRequest {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) { // <--- CHANGED PARAM TYPE
         this.id = id;
     }
 

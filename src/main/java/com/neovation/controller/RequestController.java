@@ -1,13 +1,12 @@
 package com.neovation.controller;
 
-import com.neovation.dto.CreateRequestDto;
-import com.neovation.dto.ServiceRequestDto;
-import com.neovation.dto.UpdateRequestDto;
+import com.neovation.dto.*;
 import com.neovation.model.RequestStatus;
 import com.neovation.model.ServiceRequest;
 import com.neovation.service.RequestService;
 import com.neovation.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -18,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @CrossOrigin
 @RestController
@@ -54,7 +54,7 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ServiceRequestDto> getRequestById(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestDto> getRequestById(@PathVariable String id) {
         log.info("Received API request to fetch service request ID: {}", id);
         ServiceRequestDto request = requestService.getRequestById(id);
         if (request == null) {
@@ -65,10 +65,10 @@ public class RequestController {
     }
 
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
-    public ResponseEntity<ServiceRequest> updateRequest(@PathVariable Long id, @ModelAttribute UpdateRequestDto updateRequestDto) {
+    public ResponseEntity<ServiceRequestDto> updateRequest(@PathVariable String id, @ModelAttribute UpdateRequestDto updateRequestDto) {
         log.info("Received API request to update service request ID: {}", id);
         try {
-            ServiceRequest updatedRequest = requestService.updateRequest(id, updateRequestDto);
+            ServiceRequestDto updatedRequest = requestService.updateRequest(id, updateRequestDto);
             return ResponseEntity.ok(updatedRequest);
         } catch (EntityNotFoundException e) {
             log.warn("Service request ID {} not found for update", id);
@@ -76,19 +76,32 @@ public class RequestController {
         }
     }
 
-    @PostMapping("/{requestId}/payment")
-    public ResponseEntity<String> makePayment(@PathVariable String requestId) {
-        log.info("Received API request to initiate payment for request ID: {}", requestId);
-        // Mock payment logic
-        String paymentUrl = requestService.makePayment(requestId);
-        return ResponseEntity.ok().body("{\"paymentUrl\": \"" + paymentUrl + "\"}");
+    @PostMapping("/{requestId}/payment") // <--- Uses Path Variable for requestId
+    public ResponseEntity<?> makePayment(@PathVariable String requestId, @RequestBody @Valid PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
+        log.info("Received API request to initiate payment for request ID: {} with amount: {}", requestId, paymentDto.getAmount());
+        try {
+            // Pass the requestId from path variable and the DTO to the service
+            String paymentUrl = requestService.makePayment(requestId, paymentDto);
+            // Return the URL in a custom DTO
+            return ResponseEntity.ok(new StripeCheckoutResponse(paymentUrl));
+        } catch (EntityNotFoundException e) {
+            log.warn("Payment initiation failed: Request ID {} not found.", requestId);
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Payment initiation failed for request ID {}: {}", requestId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (RuntimeException e) {
+            log.error("An unexpected error occurred during payment for request ID {}: {}", requestId, e.getMessage(), e);
+            // This handles StripeException wrapped by the service
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
+        }
     }
 
     /**
      * Deletes a service request by its ID.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteRequest(@PathVariable Long id) {
+    public ResponseEntity<?> deleteRequest(@PathVariable String id) {
         log.info("Received API request to delete service request ID: {}", id);
         try {
             requestService.deleteRequest(id);
@@ -151,13 +164,14 @@ public class RequestController {
      * Endpoint for Admin/Staff/Manager to upload an attachment to any request.
      */
     @PostMapping(value = "/{id}/attachments", consumes = "multipart/form-data")
-    public ResponseEntity<?> uploadFileToRequest(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        log.info("Received API request to add attachment to request ID: {}", id);
+    public ResponseEntity<?> uploadFileToRequest(@PathVariable String id, @RequestParam("file") MultipartFile file,
+                                                 @RequestParam(name = "purpose", required = false, defaultValue = "USER_FILE") String purpose) {
+        log.info("Received API request to add attachment to request ID: {} with purpose: {}", id, purpose);
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("File cannot be empty.");
         }
         try {
-            ServiceRequest updatedRequest = requestService.addAttachmentToRequest(id, file);
+            ServiceRequestDto updatedRequest = requestService.addAttachmentToRequest(id, file, purpose);
             // Return the updated request, or perhaps just the new attachment
             // Returning the request is consistent with the updateRequest endpoint
             return ResponseEntity.ok(updatedRequest);
