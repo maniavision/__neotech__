@@ -167,7 +167,7 @@ public class RequestService {
      * @param requestId The ID of the Service Request
      * @param paymentDto The DTO containing the requested amount and email
      */
-    public String makePayment(String requestId, PaymentRequestDto paymentDto) { // <--- MODIFIED SIGNATURE
+    public String makePayment(String requestId, PaymentRequestDto paymentDto) {
         log.info("Generating Stripe payment link for request ID: {} with requested amount: {}", requestId, paymentDto.getAmount());
 
         ServiceRequest request = serviceRequestRepository.findById(requestId)
@@ -182,29 +182,37 @@ public class RequestService {
         }
 
         // 1. Determine Payment Status based on requested amount vs. required price
-        PaymentStatus initialStatus;
-        if (requestedAmount.compareTo(requiredPrice) < 0) {
-            initialStatus = PaymentStatus.PARTIAL; // requested amount < price
-        } else {
-            // requested amount >= price. Setting to COMPLETED, acknowledging this may be temporary until Stripe webhook confirms success.
-            initialStatus = PaymentStatus.COMPLETED;
-        }
+//        PaymentStatus initialStatus;
+//        if (requestedAmount.compareTo(requiredPrice) < 0) {
+//            initialStatus = PaymentStatus.PARTIAL; // Partial payments are still pending until confirmed
+//        } else {
+//            initialStatus = PaymentStatus.PENDING; // Set to PENDING until confirmed by Stripe
+//        }
 
-        // 2. Create a new Payment record
+        // 2. Create a new Payment record and save it (to get the ID for Stripe metadata)
         Payment payment = new Payment();
         payment.setServiceRequest(request);
         payment.setAmount(requestedAmount); // Store the amount the customer intends to pay
-        payment.setEmail(paymentDto.getEmail()); // <--- NEW FIELD SET
-        payment.setPaymentStatus(initialStatus); // <--- STATUS SET BASED ON BUSINESS LOGIC
+        payment.setEmail(paymentDto.getEmail());
+        payment.setPaymentStatus(PaymentStatus.PENDING);
         payment.setPaymentProvider("Stripe");
 
         Payment savedPayment = paymentRepository.save(payment);
 
-        log.info("Created payment record ID {} for request ID {} with status {}", savedPayment.getId(), requestId, initialStatus);
+        log.info("Created payment record ID {} for request ID {} with initial status {}", savedPayment.getId(), requestId, PaymentStatus.PENDING);
 
         try {
-            // 3. Create the Stripe Checkout Session
-            return stripePaymentService.createCheckoutSession(request.getId(), savedPayment.getId());
+            // 3. Create the Stripe Checkout Session and get the Session ID
+            String sessionId = stripePaymentService.createCheckoutSession(request.getId(), savedPayment.getId(), paymentDto.getSuccessUrl());
+
+            // 4. Update the local Payment record with the Session ID and save it
+            savedPayment.setSessionId(sessionId);
+            paymentRepository.save(savedPayment);
+            log.info("Updated Payment record ID {} with Stripe Session ID: {}", savedPayment.getId(), sessionId);
+
+            // 5. Generate the final checkout URL to return to the client
+            String paymentUrl = stripePaymentService.generateCheckoutUrl(sessionId);
+            return paymentUrl;
         } catch (StripeException e) {
             log.error("Stripe API error while creating checkout session for request ID {}: {}", requestId, e.getMessage());
             // Delete the local payment record if Stripe session creation fails.

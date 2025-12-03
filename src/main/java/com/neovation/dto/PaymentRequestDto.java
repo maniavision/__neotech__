@@ -18,6 +18,8 @@ public class PaymentRequestDto {
     @NotBlank
     private String email;
 
+    private String successUrl;
+
     // Getters and Setters
 
     public BigDecimal getAmount() {
@@ -34,5 +36,13 @@ public class PaymentRequestDto {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getSuccessUrl() {
+        return successUrl;
+    }
+
+    public void setSuccessUrl(String successUrl) {
+        this.successUrl = successUrl;
     }
 }

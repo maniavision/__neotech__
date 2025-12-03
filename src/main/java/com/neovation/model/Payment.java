@@ -32,6 +32,9 @@ public class Payment {
     @Column(name = "payment_provider")
     private String paymentProvider;
 
+    @Column(name = "session_id", unique = true)
+    private String sessionId;
+
     /*
     @Column(name = "provider_payment_id")
     private String providerPaymentId;
@@ -101,5 +104,13 @@ public class Payment {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }
