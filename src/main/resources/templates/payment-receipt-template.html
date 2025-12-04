@@ -345,7 +345,7 @@
         <!-- Header Section -->
         <div class="header">
             <a th:href="${baseUrl}" target="_blank" style="text-decoration: none; display: inline-block;">
-                <img src="cid:logo" alt="Neotech" style="border: 0; outline: none; text-decoration: none; max-width: 180px; height: auto;" />
+                <img src="cid:logo" alt="Neovation" style="border: 0; outline: none; text-decoration: none; max-width: 180px; height: auto;" />
             </a>
         </div>
 
@@ -374,7 +374,7 @@
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Payment Date</span>
-                    <span class="detail-value" th:text="${#dates.format(paymentDate, 'MMM dd, yyyy HH:mm:ss')}">Jan 15, 2025 10:30:00</span>
+                    <span class="detail-value" th:text="${#temporals.format(paymentDate, 'MMM dd, yyyy HH:mm:ss')}">Jan 15, 2025 10:30:00</span>
                 </div>
                 <div class="detail-row transaction-id">
                     <span class="detail-label">Transaction ID</span>
@@ -432,7 +432,7 @@
 
         <!-- Footer Section -->
         <div class="footer">
-            <p>&copy; <span th:text="${#dates.year(#dates.createNow())}">2025</span> Neotech. All rights reserved.</p>
+            <p>&copy; <span th:text="${#dates.year(#dates.createNow())}">2025</span> Neovation. All rights reserved.</p>
             <p class="disclaimer" style="margin-top: 12px;" th:if="${baseUrl != null}">
                 <a th:href="|${baseUrl}/privacy|" style="color: #8E6BFC; text-decoration: none; font-weight: 500;">Privacy Policy</a> |
                 <a th:href="|${baseUrl}/terms|" style="color: #8E6BFC; text-decoration: none; font-weight: 500;">Terms of Service</a> |

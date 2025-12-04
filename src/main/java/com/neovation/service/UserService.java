@@ -29,6 +29,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -534,7 +535,7 @@ public class UserService {
     /**
      * Dedicated method for sending Payment Receipt email.
      */
-    public void sendPaymentReceiptEmail(Payment payment) {
+    public void sendPaymentReceiptEmail(Payment payment) { // <--- MODIFIED IMPLEMENTATION
         Locale locale = Locale.ENGLISH; // Assuming English for now, locale logic can be expanded
 
         ServiceRequest request = payment.getServiceRequest();
@@ -545,26 +546,56 @@ public class UserService {
             return;
         }
 
-        String title = messageSource.getMessage("email.payment.receipt.title", null, locale);
-        String bodyText = messageSource.getMessage("email.payment.receipt.body", null, locale);
-        String buttonText = messageSource.getMessage("email.payment.receipt.button", null, locale);
+        // --- Get Customer Details ---
+        String customerName;
+        String currency = "USD"; // Assuming USD as StripePaymentService uses "usd"
+        String transactionId = payment.getId().toString();
 
-        // Arguments: {0} = Request ID, {1} = Amount Paid, {2} = Status
-        Object[] infoArgs = { request.getId(), payment.getAmount().toString(), payment.getPaymentStatus().name() };
-        String infoText = messageSource.getMessage("email.payment.receipt.infotext", infoArgs, locale);
+        if (request.getUserId() != null) {
+            User user = userRepo.findById(request.getUserId()).orElse(null);
+            if (user != null) {
+                customerName = user.getFirstName() + " " + user.getLastName();
+            } else {
+                customerName = payment.getEmail(); // Fallback to email
+            }
+        } else {
+            // For guest checkout
+            customerName = payment.getEmail();
+        }
+
+        // --- Prepare Context for payment-receipt-template.html ---
+        Context context = new Context();
+        context.setVariable("baseUrl", frontendUrl);
+        context.setVariable("customerName", customerName);
+        context.setVariable("customerEmail", to);
+        context.setVariable("paymentDate", payment.getCreatedAt());
+        context.setVariable("transactionId", transactionId);
+        context.setVariable("serviceName", request.getTitle());
+        // Using the request description as the long-form service description
+        context.setVariable("serviceDescription", request.getDescription());
+        context.setVariable("currency", currency);
+
+        // Since no tax/subtotal logic exists, set total amount as subtotal for simplicity
+        // The HTML template uses these for display, so we set them to the amount paid.
+        context.setVariable("subtotal", payment.getAmount());
+        context.setVariable("tax", BigDecimal.ZERO);
+        context.setVariable("totalAmount", payment.getAmount());
+
+        // Hardcoded next steps for the receipt (these are specific to the new template)
+        context.setVariable("stepOne", "We have successfully processed your payment for the service request.");
+        context.setVariable("stepTwo", "Your request status has been updated to 'PAYMENT_RECEIVED'.");
+        context.setVariable("stepThree", "Our team will now begin the work and provide an update soon via email.");
 
         // Link to view the request on the frontend
-        String link = String.format("%s/requests/%s", frontendUrl, request.getId());
+        String dashboardUrl = String.format("%s/requests/%s", frontendUrl, request.getId());
+        context.setVariable("dashboardUrl", dashboardUrl);
 
-        Context context = new Context();
+        // --- Get Title from MessageSource ---
+        String title = messageSource.getMessage("email.payment.receipt.title", null, locale);
         context.setVariable("title", title);
-        context.setVariable("bodyText", bodyText);
-        context.setVariable("buttonText", buttonText);
-        context.setVariable("infoText", infoText);
-        context.setVariable("linkUrl", link);
-        context.setVariable("baseUrl", frontendUrl);
 
-        String htmlBody = templateEngine.process("email-template.html", context);
+        // --- Use the dedicated receipt template ---
+        String htmlBody = templateEngine.process("payment-receipt-template.html", context);
         sendEmail(to, title, htmlBody);
         log.info("Sent payment receipt email for Payment ID {} (Request ID {}) to user {}", payment.getId(), request.getId(), to);
     }
