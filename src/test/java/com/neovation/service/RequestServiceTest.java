@@ -102,8 +102,8 @@ class RequestServiceTest {
         assertEquals(RequestStatus.SUBMITTED, result.getStatus());
 
         // Verify email notifications were sent
-        verify(userService, times(1)).sendRequestCreatedEmail(result);
-        verify(userService, times(1)).sendNewRequestAlertEmail(result);
+        verify(userService, times(1)).sendRequestCreatedEmail(result, "en");
+        verify(userService, times(1)).sendNewRequestAlertEmail(result, "en");
 
         // Verify user was NOT registered
         verify(userService, never()).register(any(NewUserDto.class));
@@ -137,8 +137,8 @@ class RequestServiceTest {
         assertEquals(RequestStatus.SUBMITTED, result.getStatus());
 
         // Verify email notifications were sent
-        verify(userService, times(1)).sendRequestCreatedEmail(result);
-        verify(userService, times(1)).sendNewRequestAlertEmail(result);
+        verify(userService, times(1)).sendRequestCreatedEmail(result, "en");
+        verify(userService, times(1)).sendNewRequestAlertEmail(result, "en");
 
         // Verify registration was called
         ArgumentCaptor<NewUserDto> newUserCaptor = ArgumentCaptor.forClass(NewUserDto.class);
@@ -199,7 +199,7 @@ class RequestServiceTest {
         assertEquals(FilePurpose.USER_FILE, result.getAttachments().get(1).getPurpose());
 
         // Verify email notifications were sent
-        verify(userService, times(1)).sendRequestCreatedEmail(result);
-        verify(userService, times(1)).sendNewRequestAlertEmail(result);
+        verify(userService, times(1)).sendRequestCreatedEmail(result, "en");
+        verify(userService, times(1)).sendNewRequestAlertEmail(result, "en");
     }
 }

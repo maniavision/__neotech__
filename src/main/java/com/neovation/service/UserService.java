@@ -415,8 +415,8 @@ public class UserService {
     /**
      * Dedicated method for sending New Request Confirmation email.
      */
-    public void sendRequestCreatedEmail(ServiceRequest request) {
-        Locale locale = Locale.ENGLISH; // Assuming English for now
+    public void sendRequestCreatedEmail(ServiceRequest request, String lang) {
+        Locale locale = ("en".equalsIgnoreCase(lang)) ? Locale.ENGLISH : Locale.FRENCH;
         String to = request.getUserId() != null ?
                 userRepo.findById(request.getUserId()).map(User::getEmail).orElse(null) :
                 null;
@@ -453,8 +453,8 @@ public class UserService {
     /**
      * Dedicated method for sending Proposal Uploaded email.
      */
-    public void sendProposalUploadedEmail(ServiceRequest request) {
-        Locale locale = Locale.ENGLISH; // Assuming English for now
+    public void sendProposalUploadedEmail(ServiceRequest request, String lang) {
+        Locale locale = ("en".equalsIgnoreCase(lang)) ? Locale.ENGLISH : Locale.FRENCH;
         String to = request.getUserId() != null ?
                 userRepo.findById(request.getUserId()).map(User::getEmail).orElse(null) :
                 null;
@@ -491,8 +491,8 @@ public class UserService {
     /**
      * Dedicated method for sending Company Alert Email about a new request.
      */
-    public void sendNewRequestAlertEmail(ServiceRequest request) {
-        Locale locale = Locale.ENGLISH;
+    public void sendNewRequestAlertEmail(ServiceRequest request, String lang) {
+        Locale locale = ("en".equalsIgnoreCase(lang)) ? Locale.ENGLISH : Locale.FRENCH;
         String to = internalSupportEmail;
 
         if (to == null || to.isBlank()) {

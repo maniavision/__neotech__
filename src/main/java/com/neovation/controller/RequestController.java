@@ -165,13 +165,14 @@ public class RequestController {
      */
     @PostMapping(value = "/{id}/attachments", consumes = "multipart/form-data")
     public ResponseEntity<?> uploadFileToRequest(@PathVariable String id, @RequestParam("file") MultipartFile file,
-                                                 @RequestParam(name = "purpose", required = false, defaultValue = "USER_FILE") String purpose) {
+                                                 @RequestParam(name = "purpose", required = false, defaultValue = "USER_FILE") String purpose,
+                                                 @RequestParam(name = "lang", required = false) String lang) {
         log.info("Received API request to add attachment to request ID: {} with purpose: {}", id, purpose);
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("File cannot be empty.");
         }
         try {
-            ServiceRequestDto updatedRequest = requestService.addAttachmentToRequest(id, file, purpose);
+            ServiceRequestDto updatedRequest = requestService.addAttachmentToRequest(id, file, purpose, lang);
             // Return the updated request, or perhaps just the new attachment
             // Returning the request is consistent with the updateRequest endpoint
             return ResponseEntity.ok(updatedRequest);

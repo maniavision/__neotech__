@@ -101,11 +101,11 @@ public class RequestService {
 
         // Send a confirmation email to the user <--- ADDED LOGIC
         if (user != null) {
-            userService.sendRequestCreatedEmail(savedRequest);
+            userService.sendRequestCreatedEmail(savedRequest, requestData.getLang());
         }
 
         // Send internal alert email to the company/admin <--- ADDED LOGIC
-        userService.sendNewRequestAlertEmail(savedRequest);
+        userService.sendNewRequestAlertEmail(savedRequest, requestData.getLang());
         return savedRequest;
     }
 
@@ -449,7 +449,7 @@ public class RequestService {
      * @param file      The file to attach.
      * @return The updated ServiceRequest.
      */
-    public ServiceRequestDto addAttachmentToRequest(String requestId, MultipartFile file, String purposeStr) {
+    public ServiceRequestDto addAttachmentToRequest(String requestId, MultipartFile file, String purposeStr, String lang) {
         log.info("Attempting to add attachment to request ID: {} with purpose: {}", requestId, purposeStr);
 
         // 1. Security Check: Verify the current user has the required role
@@ -504,7 +504,7 @@ public class RequestService {
 
         // 6. Check if a proposal was uploaded and send email <--- ADDED LOGIC
         if (purpose == FilePurpose.PROPOSAL) {
-            userService.sendProposalUploadedEmail(updatedRequest);
+            userService.sendProposalUploadedEmail(updatedRequest, lang);
         }
 
         return mapToDto(updatedRequest);
