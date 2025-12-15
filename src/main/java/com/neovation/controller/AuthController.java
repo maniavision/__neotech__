@@ -59,7 +59,7 @@ public class AuthController {
     @GetMapping("/reset-password")
     public String resetPassword(@RequestParam String token, Model model) {
         log.info("Received API request to /reset-password with token: {}", token);
-        userService.confirmEmail(token);
+        userService.resetPassword(token);
         log.info("Email confirmation successful for token: {}", token);
         model.addAttribute("baseURL", frontendUrl);
         return "confirmation-success";
@@ -87,7 +87,7 @@ public class AuthController {
     @ResponseBody
     public ResponseEntity<?> resetPassword(@RequestBody @Valid ResetPasswordDto dto) {
         log.info("Received API request to /reset-password with token: {}", dto.getToken());
-        userService.resetPassword(dto);
+        userService.resetPassword("dto");
         return ResponseEntity.ok("Password has been updated.");
     }
 

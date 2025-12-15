@@ -243,24 +243,45 @@ public class UserService {
         log.info("Sent password reset email to: {}", email);
     }
 
-    public void resetPassword(ResetPasswordDto dto) {
-        log.info("Attempting to reset password with token: {}", dto.getToken());
-        PasswordResetToken prt = prtRepo.findByToken(dto.getToken())
+    public void resetPassword(String token) {
+        log.info("Attempting to reset password with token: {}", token);
+        PasswordResetToken prt = prtRepo.findByToken(token)
                 .orElseThrow(() -> {
-                    log.warn("Invalid token used for password reset: {}", dto.getToken());
+                    log.warn("Invalid token used for password reset: {}", token);
                     return new RuntimeException("Invalid token");
                 });
 
         if (prt.getExpiryDate().isBefore(LocalDateTime.now())) {
-            log.warn("Expired token used for password reset: {}", dto.getToken());
+            log.warn("Expired token used for password reset: {}", token);
             throw new RuntimeException("Token expired");
         }
 
         User user = prt.getUser();
-        user.setPassword(encoder.encode(dto.getNewPassword()));
+        String newPassword = generateRandomPassword();
+        user.setPassword(encoder.encode(newPassword));
         userRepo.save(user);
         prtRepo.delete(prt);
         log.info("Successfully reset password for user: {}", user.getEmail());
+
+        Locale locale = Locale.ENGLISH;
+
+        String title = messageSource.getMessage("email.confirm.title", null, locale);
+        String bodyText = messageSource.getMessage("email.confirm.body", null, locale);
+        // Pass the new password as an argument for the {0} placeholder
+        Object[] args = { newPassword };
+        String infoText = messageSource.getMessage("email.confirm.infotext", args, locale);
+
+        Context context = new Context();
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("infoText", infoText);
+        context.setVariable("linkUrl", null);
+        context.setVariable("baseUrl", frontendUrl);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(user.getEmail(),
+                title,
+                htmlBody);
     }
 
     public User getUserByEmail(String email) {

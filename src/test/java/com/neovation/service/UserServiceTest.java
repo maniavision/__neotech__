@@ -300,7 +300,7 @@ class UserServiceTest {
         when(encoder.encode(dto.getNewPassword())).thenReturn("encodedNewPassword");
 
         // --- Act ---
-        userService.resetPassword(dto);
+        userService.resetPassword(token);
 
         // --- Assert ---
         // 1. Verify user password was updated
@@ -325,7 +325,7 @@ class UserServiceTest {
 
         // --- Act & Assert ---
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.resetPassword(dto);
+            userService.resetPassword(token);
         });
         assertEquals("Invalid token", exception.getMessage());
 
