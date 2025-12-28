@@ -364,6 +364,34 @@ public class UserService {
         }
     }
 
+    // Add to src/main/java/com/neovation/service/UserService.java
+
+    /**
+     * Deletes the profile image for a specific user.
+     * @param userEmail The email of the authenticated user.
+     */
+    public void deleteProfileImage(String userEmail) {
+        log.info("Deleting profile image for user: {}", userEmail);
+        User user = getUserByEmail(userEmail);
+
+        String profileImagePath = user.getProfileImage();
+
+        if (profileImagePath != null && !profileImagePath.isEmpty()) {
+            // 1. Delete the file from Google Cloud Storage
+            // If the path is a full URL, use deleteFileFromUrl;
+            // if it's just the blob path, use deleteFile.
+            // Based on updateProfileImage implementation, it's the blob path.
+            fileStorageService.deleteFile(profileImagePath);
+
+            // 2. Clear the reference in the database
+            user.setProfileImage(null);
+            userRepo.save(user);
+            log.info("Successfully removed profile image reference for user: {}", userEmail);
+        } else {
+            log.warn("User {} attempted to delete profile image but none was set.", userEmail);
+        }
+    }
+
     /**
      * Gets a signed URL for the currently authenticated user's profile picture.
      * @param userEmail The email of the authenticated user.

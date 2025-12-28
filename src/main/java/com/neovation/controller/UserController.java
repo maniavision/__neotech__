@@ -46,6 +46,23 @@ public class UserController {
         return ResponseEntity.ok().body(Map.of("profileImageUrl", publicUrl));
     }
 
+    // Add to src/main/java/com/neovation/controller/UserController.java
+
+    @DeleteMapping("/profile-image")
+    public ResponseEntity<?> deleteProfileImage(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body("User not authenticated");
+        }
+
+        try {
+            userService.deleteProfileImage(userDetails.getUsername());
+            return ResponseEntity.ok().body(Map.of("message", "Profile image deleted successfully"));
+        } catch (Exception e) {
+            log.error("Failed to delete profile image for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.internalServerError().body("Error deleting profile image");
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
         log.info("User attempting to update user with ID: {}", id);
