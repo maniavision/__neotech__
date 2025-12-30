@@ -1,6 +1,7 @@
 package com.neovation.service;
 
 import com.neovation.config.JwtTokenProvider;
+import com.neovation.dto.ChangePasswordDto;
 import com.neovation.model.*;
 import com.neovation.repository.EmailVerificationTokenRepository;
 import com.neovation.repository.PasswordResetTokenRepository;
@@ -648,5 +649,20 @@ public class UserService {
         String htmlBody = templateEngine.process("payment-receipt-template.html", context);
         sendEmail(to, title, htmlBody);
         log.info("Sent payment receipt email for Payment ID {} (Request ID {}) to user {}", payment.getId(), request.getId(), to);
+    }
+
+    public void changePassword(String email, ChangePasswordDto dto) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Verify current password
+        if (!encoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid current password");
+        }
+
+        // Set and encode new password
+        user.setPassword(encoder.encode(dto.getNewPassword()));
+        userRepo.save(user);
+        log.info("Password successfully changed for user: {}", email);
     }
 }
