@@ -1,6 +1,7 @@
 package com.neovation.service;
 
 import com.neovation.config.JwtTokenProvider;
+import com.neovation.dto.ChangePasswordDto;
 import com.neovation.model.*;
 import com.neovation.repository.EmailVerificationTokenRepository;
 import com.neovation.repository.PasswordResetTokenRepository;
@@ -29,6 +30,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -103,6 +105,7 @@ public class UserService {
         BeanUtils.copyProperties(dto, user);
         user.setCountry(country);
         user.setPassword(encoder.encode(dto.getPassword()));
+        user.setCreatedAt(LocalDateTime.now());
         user = userRepo.save(user);
         log.info("Successfully saved new user with ID: {}", user.getId());
 
@@ -241,24 +244,45 @@ public class UserService {
         log.info("Sent password reset email to: {}", email);
     }
 
-    public void resetPassword(ResetPasswordDto dto) {
-        log.info("Attempting to reset password with token: {}", dto.getToken());
-        PasswordResetToken prt = prtRepo.findByToken(dto.getToken())
+    public void resetPassword(String token) {
+        log.info("Attempting to reset password with token: {}", token);
+        PasswordResetToken prt = prtRepo.findByToken(token)
                 .orElseThrow(() -> {
-                    log.warn("Invalid token used for password reset: {}", dto.getToken());
+                    log.warn("Invalid token used for password reset: {}", token);
                     return new RuntimeException("Invalid token");
                 });
 
         if (prt.getExpiryDate().isBefore(LocalDateTime.now())) {
-            log.warn("Expired token used for password reset: {}", dto.getToken());
+            log.warn("Expired token used for password reset: {}", token);
             throw new RuntimeException("Token expired");
         }
 
         User user = prt.getUser();
-        user.setPassword(encoder.encode(dto.getNewPassword()));
+        String newPassword = generateRandomPassword();
+        user.setPassword(encoder.encode(newPassword));
         userRepo.save(user);
         prtRepo.delete(prt);
         log.info("Successfully reset password for user: {}", user.getEmail());
+
+        Locale locale = Locale.ENGLISH;
+
+        String title = messageSource.getMessage("email.confirm.title", null, locale);
+        String bodyText = messageSource.getMessage("email.confirm.body", null, locale);
+        // Pass the new password as an argument for the {0} placeholder
+        Object[] args = { newPassword };
+        String infoText = messageSource.getMessage("email.confirm.infotext", args, locale);
+
+        Context context = new Context();
+        context.setVariable("title", title);
+        context.setVariable("bodyText", bodyText);
+        context.setVariable("infoText", infoText);
+        context.setVariable("linkUrl", null);
+        context.setVariable("baseUrl", frontendUrl);
+
+        String htmlBody = templateEngine.process("email-template.html", context);
+        sendEmail(user.getEmail(),
+                title,
+                htmlBody);
     }
 
     public User getUserByEmail(String email) {
@@ -341,6 +365,34 @@ public class UserService {
         }
     }
 
+    // Add to src/main/java/com/neovation/service/UserService.java
+
+    /**
+     * Deletes the profile image for a specific user.
+     * @param userEmail The email of the authenticated user.
+     */
+    public void deleteProfileImage(String userEmail) {
+        log.info("Deleting profile image for user: {}", userEmail);
+        User user = getUserByEmail(userEmail);
+
+        String profileImagePath = user.getProfileImage();
+
+        if (profileImagePath != null && !profileImagePath.isEmpty()) {
+            // 1. Delete the file from Google Cloud Storage
+            // If the path is a full URL, use deleteFileFromUrl;
+            // if it's just the blob path, use deleteFile.
+            // Based on updateProfileImage implementation, it's the blob path.
+            fileStorageService.deleteFile(profileImagePath);
+
+            // 2. Clear the reference in the database
+            user.setProfileImage(null);
+            userRepo.save(user);
+            log.info("Successfully removed profile image reference for user: {}", userEmail);
+        } else {
+            log.warn("User {} attempted to delete profile image but none was set.", userEmail);
+        }
+    }
+
     /**
      * Gets a signed URL for the currently authenticated user's profile picture.
      * @param userEmail The email of the authenticated user.
@@ -413,8 +465,8 @@ public class UserService {
     /**
      * Dedicated method for sending New Request Confirmation email.
      */
-    public void sendRequestCreatedEmail(ServiceRequest request) {
-        Locale locale = Locale.ENGLISH; // Assuming English for now
+    public void sendRequestCreatedEmail(ServiceRequest request, String lang) {
+        Locale locale = ("en".equalsIgnoreCase(lang)) ? Locale.ENGLISH : Locale.FRENCH;
         String to = request.getUserId() != null ?
                 userRepo.findById(request.getUserId()).map(User::getEmail).orElse(null) :
                 null;
@@ -451,8 +503,8 @@ public class UserService {
     /**
      * Dedicated method for sending Proposal Uploaded email.
      */
-    public void sendProposalUploadedEmail(ServiceRequest request) {
-        Locale locale = Locale.ENGLISH; // Assuming English for now
+    public void sendProposalUploadedEmail(ServiceRequest request, String lang) {
+        Locale locale = ("en".equalsIgnoreCase(lang)) ? Locale.ENGLISH : Locale.FRENCH;
         String to = request.getUserId() != null ?
                 userRepo.findById(request.getUserId()).map(User::getEmail).orElse(null) :
                 null;
@@ -489,8 +541,8 @@ public class UserService {
     /**
      * Dedicated method for sending Company Alert Email about a new request.
      */
-    public void sendNewRequestAlertEmail(ServiceRequest request) {
-        Locale locale = Locale.ENGLISH;
+    public void sendNewRequestAlertEmail(ServiceRequest request, String lang) {
+        Locale locale = ("en".equalsIgnoreCase(lang)) ? Locale.ENGLISH : Locale.FRENCH;
         String to = internalSupportEmail;
 
         if (to == null || to.isBlank()) {
@@ -534,7 +586,7 @@ public class UserService {
     /**
      * Dedicated method for sending Payment Receipt email.
      */
-    public void sendPaymentReceiptEmail(Payment payment) {
+    public void sendPaymentReceiptEmail(Payment payment) { // <--- MODIFIED IMPLEMENTATION
         Locale locale = Locale.ENGLISH; // Assuming English for now, locale logic can be expanded
 
         ServiceRequest request = payment.getServiceRequest();
@@ -545,27 +597,72 @@ public class UserService {
             return;
         }
 
-        String title = messageSource.getMessage("email.payment.receipt.title", null, locale);
-        String bodyText = messageSource.getMessage("email.payment.receipt.body", null, locale);
-        String buttonText = messageSource.getMessage("email.payment.receipt.button", null, locale);
+        // --- Get Customer Details ---
+        String customerName;
+        String currency = "USD"; // Assuming USD as StripePaymentService uses "usd"
+        String transactionId = payment.getId().toString();
 
-        // Arguments: {0} = Request ID, {1} = Amount Paid, {2} = Status
-        Object[] infoArgs = { request.getId(), payment.getAmount().toString(), payment.getPaymentStatus().name() };
-        String infoText = messageSource.getMessage("email.payment.receipt.infotext", infoArgs, locale);
+        if (request.getUserId() != null) {
+            User user = userRepo.findById(request.getUserId()).orElse(null);
+            if (user != null) {
+                customerName = user.getFirstName() + " " + user.getLastName();
+            } else {
+                customerName = payment.getEmail(); // Fallback to email
+            }
+        } else {
+            // For guest checkout
+            customerName = payment.getEmail();
+        }
+
+        // --- Prepare Context for payment-receipt-template.html ---
+        Context context = new Context();
+        context.setVariable("baseUrl", frontendUrl);
+        context.setVariable("customerName", customerName);
+        context.setVariable("customerEmail", to);
+        context.setVariable("paymentDate", payment.getCreatedAt());
+        context.setVariable("transactionId", transactionId);
+        context.setVariable("serviceName", request.getTitle());
+        // Using the request description as the long-form service description
+        context.setVariable("serviceDescription", request.getDescription());
+        context.setVariable("currency", currency);
+
+        // Since no tax/subtotal logic exists, set total amount as subtotal for simplicity
+        // The HTML template uses these for display, so we set them to the amount paid.
+        context.setVariable("subtotal", payment.getAmount());
+        context.setVariable("tax", BigDecimal.ZERO);
+        context.setVariable("totalAmount", payment.getAmount());
+
+        // Hardcoded next steps for the receipt (these are specific to the new template)
+        context.setVariable("stepOne", "We have successfully processed your payment for the service request.");
+        context.setVariable("stepTwo", "Your request status has been updated to 'PAYMENT_RECEIVED'.");
+        context.setVariable("stepThree", "Our team will now begin the work and provide an update soon via email.");
 
         // Link to view the request on the frontend
-        String link = String.format("%s/requests/%s", frontendUrl, request.getId());
+        String dashboardUrl = String.format("%s/requests/%s", frontendUrl, request.getId());
+        context.setVariable("dashboardUrl", dashboardUrl);
 
-        Context context = new Context();
+        // --- Get Title from MessageSource ---
+        String title = messageSource.getMessage("email.payment.receipt.title", null, locale);
         context.setVariable("title", title);
-        context.setVariable("bodyText", bodyText);
-        context.setVariable("buttonText", buttonText);
-        context.setVariable("infoText", infoText);
-        context.setVariable("linkUrl", link);
-        context.setVariable("baseUrl", frontendUrl);
 
-        String htmlBody = templateEngine.process("email-template.html", context);
+        // --- Use the dedicated receipt template ---
+        String htmlBody = templateEngine.process("payment-receipt-template.html", context);
         sendEmail(to, title, htmlBody);
         log.info("Sent payment receipt email for Payment ID {} (Request ID {}) to user {}", payment.getId(), request.getId(), to);
+    }
+
+    public void changePassword(String email, ChangePasswordDto dto) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Verify current password
+        if (!encoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid current password");
+        }
+
+        // Set and encode new password
+        user.setPassword(encoder.encode(dto.getNewPassword()));
+        userRepo.save(user);
+        log.info("Password successfully changed for user: {}", email);
     }
 }

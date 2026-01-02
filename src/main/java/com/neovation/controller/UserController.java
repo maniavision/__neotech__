@@ -1,9 +1,12 @@
 package com.neovation.controller;
 
+import com.neovation.dto.ChangePasswordDto;
 import com.neovation.model.User;
 import com.neovation.service.UserService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -44,6 +47,23 @@ public class UserController {
 
         // Return the URL in the response body
         return ResponseEntity.ok().body(Map.of("profileImageUrl", publicUrl));
+    }
+
+    // Add to src/main/java/com/neovation/controller/UserController.java
+
+    @DeleteMapping("/profile-image")
+    public ResponseEntity<?> deleteProfileImage(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body("User not authenticated");
+        }
+
+        try {
+            userService.deleteProfileImage(userDetails.getUsername());
+            return ResponseEntity.ok().body(Map.of("message", "Profile image deleted successfully"));
+        } catch (Exception e) {
+            log.error("Failed to delete profile image for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.internalServerError().body("Error deleting profile image");
+        }
     }
 
     @PutMapping("/{id}")
@@ -110,6 +130,17 @@ public class UserController {
             }
             log.error("Failed to generate signed URL for user ID: {}", id, e);
             return ResponseEntity.internalServerError().body("Error generating URL"); // HTTP 500
+        }
+    }
+
+    @PutMapping("/me/change-password")
+    public ResponseEntity<?> changePassword(@AuthenticationPrincipal UserDetails userDetails,
+                                            @Valid @RequestBody ChangePasswordDto dto) {
+        try {
+            userService.changePassword(userDetails.getUsername(), dto);
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
 }

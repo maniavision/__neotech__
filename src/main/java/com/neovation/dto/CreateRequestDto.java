@@ -19,6 +19,7 @@ public class CreateRequestDto {
     private LocalDate expectedDueDate;
     private String countryCode;
     private List<MultipartFile> attachments;
+    private String lang;
 
     public String getFirstName() {
         return firstName;
@@ -112,5 +113,13 @@ public class CreateRequestDto {
     }
     public void setCountryCode(String countryCode) {
         this.countryCode = countryCode;
+    }
+
+    public String getLang() {
+        return lang;
+    }
+
+    public void setLang(String lang) {
+        this.lang = lang;
     }
 }
