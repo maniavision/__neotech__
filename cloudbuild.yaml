@@ -54,10 +54,6 @@ steps:
       # --- BEST PRACTICE: INJECT SECRETS ---
       # This maps the *name* of the secret in Secret Manager (e.g., neotech-db-pass)
       # to the *environment variable* name (e.g., SPRING_DATASOURCE_PASSWORD).
-      - '--set-secrets=SPRING_DATASOURCE_USERNAME=neovation-db-user:latest'
-      - '--set-secrets=SPRING_DATASOURCE_PASSWORD=neovation-db-pass:latest'
-      - '--set-secrets=SPRING_MAIL_USERNAME=neovation-mail-user:latest'
-      - '--set-secrets=SPRING_MAIL_PASSWORD=neovation-mail-pass:latest'
       - '--set-secrets=JWT_SECRET=neovation-jwt-secret:latest'
 
       # --- SET ENVIRONMENT-SPECIFIC VARIABLES ---
@@ -69,6 +65,7 @@ steps:
       - '--set-env-vars=STRIPE_PUBLIC_KEY=${_STRIPE_PUBLIC_KEY}'
       - '--set-env-vars=STRIPE_SECRET_KEY=${_STRIPE_SECRET_KEY}'
       - '--set-env-vars=APP_INTERNAL_SUPPORT_EMAIL=${_APP_INTERNAL_SUPPORT_EMAIL}'
+      - '--set-env-vars=GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}'
 
       # --- CONNECT TO CLOUD SQL (Example) ---
       # This is required if your _DB_URL is a Cloud SQL instance.
@@ -92,6 +89,7 @@ substitutions:
   _FRONTEND_URL: 'http://localhost:4200' # Dev default
   _CLOUD_SQL_INSTANCE: mineral-trainer-477512-c2:us-east4:neovation-dev
   _APP_INTERNAL_SUPPORT_EMAIL: neovation101@gmail.com
+  _GCS_BUCKET_NAME: neovation-files-dev
   #jdbc:mysql://google/neovation?cloudSqlInstance=mineral-trainer-477512-c2:us-east4:neovation-dev
   # _CLOUD_SQL_INSTANCE: 'my-project:us-central1:my-prod-db' # Example
 
